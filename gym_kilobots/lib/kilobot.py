@@ -1,16 +1,23 @@
 import numpy as np
-import Box2D
+from Box2D import b2Vec2
 
 from .body import Circle
 
 from gym.envs.classic_control import rendering
 
-import math
+import math, time
 
 
 class Kilobot(Circle):
     # all parameters in real world units
     _radius = 0.0165  # meters
+    _leg_front = np.array([.0, _radius])
+    _leg_left = np.array([-0.013, -.009])
+    _leg_right = np.array([+0.013, -.009])
+    _light_sensor = np.array([.0, -_radius])
+
+    _impulse_right = _leg_front - _leg_right
+    _impulse_left = _leg_front - _leg_left
 
     _max_linear_velocity = 0.01  # meters / s
     _max_angular_velocity = 0.1 * math.pi  # radians / s
@@ -22,110 +29,135 @@ class Kilobot(Circle):
     _linear_damping = 0.8
     _angular_damping = 0.8
 
-    """
-        scale_real_to_sim: scale factor to go from real world to
-            simulation coords (for numerical reasons)
-        scale_real_to_vis: scale factor to go from real world to
-            visualisation coords (meter to pixels)
-    """
-
-    def __init__(self, world, position=None, rotation=None):
+    def __init__(self, world, position=None, rotation=None, lights=None):
         super().__init__(world=world, position=position, rotation=rotation, radius=self._radius)
 
         # 0 .. 255
         self._motor_left = 0
         self._motor_right = 0
-        self._light_measurement = 0
+        self.__light_measurement = 0
 
-        self.body_color = (127, 127, 127, 255)
-        self.highlight_color = (255, 0, 0, 255)
+        self._body_color = (.5, .5, .5)
+        self._highlight_color = (1., 1., 1.)
 
-    def step(self):
-        raise NotImplementedError('Kilobot subclass needs to implement step')
+        self._lights = lights
 
-    def set_velocities(self):
-        factor_left = self._motor_left / 255.0
-        factor_right = self._motor_right / 255.0
+        self._setup()
 
-        # TODO probably not the right way to move the kilobots
-        # TODO look at kilombo
-        linear_factor = 0.5 * (factor_left + factor_right)
-        angular_factor = factor_right - factor_left
+    def get_ambientlight(self):
+        if self._lights is not None:
+            sensor_position = self._body.GetWorldPoint((0.0, -self._radius))
+            light_measurements = [l.get_value(sensor_position) for l in self._lights]
+            # todo add noise here
+            return int(max(light_measurements))
+        else:
+            return 0
 
-        self.body.linearVelocity = self.body.GetWorldVector(
-            (0.0, linear_factor * self.sim_max_lin_vel))
-        self.body.angularVelocity = angular_factor * self._max_angular_velocity
-
-    def set_motor(self, left, right):
+    def set_motors(self, left, right):
         self._motor_left = left
         self._motor_right = right
 
-    def get_position(self):
-        pos = self.body.position
-        return np.array([pos[0], pos[1]]).reshape(1, 2) / self.scale_real_to_sim
+    def set_color(self, color):
+        self._highlight_color = color
 
-    def sense_light(self, light):
-        self._light_measurement = light.get_value(self.get_position())
-        # TODO implement
-        pass
+    def step(self, time_step):
+        # loop kilobot logic
+        self._loop()
+
+        cos_dir = np.cos(self.get_orientation())
+        sin_dir = np.sin(self.get_orientation())
+
+        linear_velocity = np.zeros(2)
+        angular_velocity = .0
+
+        # compute new kilobot position or kilobot velocity
+        if self._motor_left and self._motor_right:
+            linear_velocity = (self._motor_right + self._motor_left) / 510. * self._max_linear_velocity
+            linear_velocity = np.array([sin_dir, cos_dir]) * linear_velocity
+
+            angular_velocity = (self._motor_right - self._motor_left) / 510. * self._max_angular_velocity
+
+        elif self._motor_right:
+            angular_velocity = self._motor_right / 255. * self._max_angular_velocity
+            next_orientation = self.get_orientation() + angular_velocity * time_step
+
+            linear_velocity = self._radius * np.array([(cos_dir - np.cos(next_orientation)),
+                                                       (-sin_dir + np.sin(next_orientation))])
+
+        elif self._motor_left:
+            angular_velocity = - self._motor_left / 255. * self._max_angular_velocity
+            next_orientation = self.get_orientation() + angular_velocity * time_step
+
+            linear_velocity = self._radius * np.array([(-cos_dir + np.cos(next_orientation)),
+                                                       (sin_dir - np.sin(next_orientation))])
+
+        self._body.angularVelocity = angular_velocity
+        self._body.linearVelocity = b2Vec2(*linear_velocity.astype(float))
 
     def draw(self, viewer: rendering.Viewer):
         super(Kilobot, self).draw(viewer)
 
-        top = self.body.GetWorldPoint((0.0, self._radius))
-        w = 0.1 * self._radius
-        h = np.cos(np.arcsin(w)) - self._radius
-        bottom_left = self.body.GetWorldPoint((-w, -h))
-        bottom_right = self.body.GetWorldPoint((w, -h))
+        top = self._body.GetWorldPoint((0.0, self._radius-.003))
+        # w = 0.1 * self._radius
+        # h = np.cos(np.arcsin(w)) - self._radius
+        bottom_left = self._body.GetWorldPoint((-0.006, -0.009))
+        bottom_right = self._body.GetWorldPoint((0.006, -0.009))
 
-        viewer.draw_polygon((top, bottom_left, bottom_right), color=(255, 212, 0))
+        viewer.draw_polygon((top, bottom_left, bottom_right), color=self._highlight_color)
+
+        t = rendering.Transform(translation=self._body.GetWorldPoint((0.0, -self._radius)))
+        viewer.draw_circle(.005, res=100, color=(1, 1, 0)).add_attr(t)
+
+    def _setup(self):
+        raise NotImplementedError('Kilobot subclass needs to implement _setup')
+
+    def _loop(self):
+        raise NotImplementedError('Kilobot subclass needs to implement _loop')
 
 
 class PhototaxisKilobot(Kilobot):
-    def __init__(self, world, pos):
-        super(PhototaxisKilobot, self).__init__(position=pos, world=world)
+    def __init__(self, *args, **kwargs):
+        super(PhototaxisKilobot, self).__init__(*args, **kwargs)
 
-        # self.scale_sim_to_real = 1.0 / scale_real_to_sim
+        self.__light_measurement = 0
+        self.__threshold = 1024
+        self.__turn_direction = None
+        self.__last_update = .0
+        self.__update_interval = 1.
 
-        self.last_light = 0
-        self.turn_cw = 1
-        self.counter = 0
+    def _setup(self):
+        self.__turn_left()
 
-        # self.env = env
+    def _loop(self):
+        now = time.monotonic()
+        if now - self.__last_update < self.__update_interval:
+            return
 
-    def step(self):
-        # TODO better method to simulate the ambient light sensor
-        # (multiple lights?)
-        light = self.env['light_pos']
+        print(now)
+        self.__last_update = now
 
-        pos_real = self.scale_sim_to_real * self.body.GetWorldPoint((0.0, self.sim_radius))
-        dist = (pos_real - Box2D.b2Vec2(light[0, 0], light[0, 1])).length
+        self.__light_measurement = self.get_ambientlight()
+        print(self.__light_measurement)
 
-        current_light = 1.0 - dist
+        if self.__light_measurement < self.__threshold:
+            self.__threshold = self.__light_measurement
 
-        # TODO better phototaxis algorithm?
-        if dist > 0.01:
-            if current_light < self.last_light:
-                self.counter = 0
-                if self.turn_cw == 1:
-                    self.turn_cw = 0
-                else:
-                    self.turn_cw = 1
-            else:
-                self.counter = self.counter + 1
-
-            self.last_light = current_light
-
-            if self.counter > 50:
-                other = 30  # 150
-            else:
-                other = 0
-
-            other = 0
-
-            if self.turn_cw == 1:
-                self.set_motor(255, other)
-            else:
-                self.set_motor(other, 255)
         else:
-            self.set_motor(0, 0)
+            self.__threshold = self.__light_measurement
+            self.__switch_directions()
+
+    def __switch_directions(self):
+        if self.__turn_direction == 'left':
+            self.__turn_right()
+        else:
+            self.__turn_left()
+
+    def __turn_right(self):
+        self.__turn_direction = 'right'
+        self.set_motors(0, 255)
+        self.set_color((255, 0, 0))
+
+    def __turn_left(self):
+        self.__turn_direction = 'left'
+        self.set_motors(255, 0)
+        self.set_color((0, 255, 0))
