@@ -9,27 +9,31 @@ import math, time
 
 
 class Kilobot(Circle):
-    # all parameters in real world units
-    _radius = 0.0165  # meters
+    _radius = 0.0165
+
     _leg_front = np.array([.0, _radius])
     _leg_left = np.array([-0.013, -.009])
     _leg_right = np.array([+0.013, -.009])
-    _light_sensor = np.array([.0, -_radius])
+    _light_sensor = np.array([.0, -_radius+.001])
+    _led = np.array([.011, .01])
 
-    _impulse_right = _leg_front - _leg_right
-    _impulse_left = _leg_front - _leg_left
+    _impulse_right_dir = _leg_front - _leg_right
+    _impulse_left_dir = _leg_front - _leg_left
+    _impulse_right_point_body = (_leg_front + _leg_right) / 2
+    _impulse_left_point_body = (_leg_front + _leg_left) / 2
 
     _max_linear_velocity = 0.01  # meters / s
-    _max_angular_velocity = 0.1 * math.pi  # radians / s
+    _max_angular_velocity = 0.2 * math.pi  # radians / s
 
     _density = 1.0
     _friction = 0.2
     _restitution = 0.0
 
-    _linear_damping = 0.8
-    _angular_damping = 0.8
+    _linear_damping = .8
+    _angular_damping = .8
 
     def __init__(self, world, position=None, rotation=None, lights=None):
+        # all parameters in real world units
         super().__init__(world=world, position=position, rotation=rotation, radius=self._radius)
 
         # 0 .. 255
@@ -37,7 +41,7 @@ class Kilobot(Circle):
         self._motor_right = 0
         self.__light_measurement = 0
 
-        self._body_color = (.5, .5, .5)
+        self._body_color = (.4, .4, .4)
         self._highlight_color = (1., 1., 1.)
 
         self._lights = lights
@@ -79,24 +83,34 @@ class Kilobot(Circle):
 
         elif self._motor_right:
             angular_velocity = self._motor_right / 255. * self._max_angular_velocity
-            next_orientation = self.get_orientation() + angular_velocity * time_step
+            angular_displacement = angular_velocity * time_step
 
-            linear_velocity = self._radius * np.array([(cos_dir - np.cos(next_orientation)),
-                                                       (-sin_dir + np.sin(next_orientation))])
+            c, s = np.cos(angular_displacement), np.sin(angular_displacement)
+            R = np.array([[c, -s], [s, c]])
+
+            translation = self._leg_left - R.dot(self._leg_left)
+            linear_velocity = self._body.GetWorldVector(translation) / time_step
 
         elif self._motor_left:
-            angular_velocity = - self._motor_left / 255. * self._max_angular_velocity
-            next_orientation = self.get_orientation() + angular_velocity * time_step
+            angular_velocity = -self._motor_left / 255. * self._max_angular_velocity
+            angular_displacement = angular_velocity * time_step
 
-            linear_velocity = self._radius * np.array([(-cos_dir + np.cos(next_orientation)),
-                                                       (sin_dir - np.sin(next_orientation))])
+            c, s = np.cos(angular_displacement), np.sin(angular_displacement)
+            R = np.array([[c, -s], [s, c]])
+
+            translation = self._leg_right - R.dot(self._leg_right)
+            linear_velocity = self._body.GetWorldVector(translation) / time_step
 
         self._body.angularVelocity = angular_velocity
-        self._body.linearVelocity = b2Vec2(*linear_velocity.astype(float))
+        if type(linear_velocity) == np.ndarray:
+            self._body.linearVelocity = b2Vec2(*linear_velocity.astype(float))
+        else:
+            self._body.linearVelocity = linear_velocity
 
     def draw(self, viewer: rendering.Viewer):
         super(Kilobot, self).draw(viewer)
 
+        # draw direction as triangle with color set by function
         top = self._body.GetWorldPoint((0.0, self._radius-.003))
         # w = 0.1 * self._radius
         # h = np.cos(np.arcsin(w)) - self._radius
@@ -105,8 +119,22 @@ class Kilobot(Circle):
 
         viewer.draw_polygon((top, bottom_left, bottom_right), color=self._highlight_color)
 
-        t = rendering.Transform(translation=self._body.GetWorldPoint((0.0, -self._radius)))
-        viewer.draw_circle(.005, res=100, color=(1, 1, 0)).add_attr(t)
+        t = rendering.Transform(translation=self._body.GetWorldPoint(self._led))
+        viewer.draw_circle(.003, res=30, color=self._highlight_color).add_attr(t)
+        viewer.draw_circle(.003, res=30, color=(0, 0, 0), filled=False).add_attr(t)
+
+        # light sensor
+        t = rendering.Transform(translation=self._body.GetWorldPoint(self._light_sensor))
+        viewer.draw_circle(.004, res=30, color=(1, 1, 0)).add_attr(t)
+        viewer.draw_circle(.004, res=30, color=(0, 0, 0), filled=False).add_attr(t)
+
+        # draw legs
+        t = rendering.Transform(translation=self._body.GetWorldPoint(self._leg_front))
+        viewer.draw_circle(.002, res=30, color=(0, 0, 0)).add_attr(t)
+        t = rendering.Transform(translation=self._body.GetWorldPoint(self._leg_left))
+        viewer.draw_circle(.002, res=30, color=(0, 0, 0)).add_attr(t)
+        t = rendering.Transform(translation=self._body.GetWorldPoint(self._leg_right))
+        viewer.draw_circle(.002, res=30, color=(0, 0, 0)).add_attr(t)
 
     def _setup(self):
         raise NotImplementedError('Kilobot subclass needs to implement _setup')
@@ -120,30 +148,29 @@ class PhototaxisKilobot(Kilobot):
         super(PhototaxisKilobot, self).__init__(*args, **kwargs)
 
         self.__light_measurement = 0
-        self.__threshold = 1024
+        self.__threshold = 0
         self.__turn_direction = None
         self.__last_update = .0
-        self.__update_interval = 1.
+        self.__update_interval = 60
+        self.__update_counter = 0
 
     def _setup(self):
         self.__turn_left()
 
     def _loop(self):
-        now = time.monotonic()
-        if now - self.__last_update < self.__update_interval:
+
+        if self.__update_counter % self.__update_interval:
+            self.__update_counter += 1
             return
 
-        print(now)
-        self.__last_update = now
+        self.__update_counter += 1
 
         self.__light_measurement = self.get_ambientlight()
         print(self.__light_measurement)
 
-        if self.__light_measurement < self.__threshold:
-            self.__threshold = self.__light_measurement
-
-        else:
-            self.__threshold = self.__light_measurement
+        if self.__light_measurement > self.__threshold:
+            print("switch directions...")
+            self.__threshold = self.__light_measurement + 1
             self.__switch_directions()
 
     def __switch_directions(self):

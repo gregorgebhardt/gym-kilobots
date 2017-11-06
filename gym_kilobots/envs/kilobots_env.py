@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 from scipy import stats
 
@@ -10,7 +12,7 @@ from Box2D import b2World, b2ChainShape, b2Vec2
 # import os, signal
 
 from ..lib.body import Body, CornerQuad
-from ..lib.kilobot import PhototaxisKilobot
+from ..lib.kilobot import Kilobot, PhototaxisKilobot
 from ..lib.light import Light, CircularGradientLight, GradientLight
 
 
@@ -93,6 +95,10 @@ class KilobotsEnv(gym.Env):
         self._viewer.draw_polygon([(-1., .75), (-1., -.75), (1., -.75), (1., .75)], color=(1., 1., 1.))
         self._viewer.draw_polyline([(-1., .75), (-1., -.75), (1., -.75), (1., .75), (-1., .75)], linewidth=.01)
 
+        # render light
+        for l in self._lights:
+            l.draw(self._viewer)
+
         # render objects
         for o in self._objects:
             o.draw(self._viewer)
@@ -100,10 +106,6 @@ class KilobotsEnv(gym.Env):
         # render kilobots
         for kb in self._kilobots:
             kb.draw(self._viewer)
-
-        # render light
-        for l in self._lights:
-            l.draw(self._viewer)
 
         self._viewer.render()
 
@@ -125,17 +127,17 @@ class QuadAssemblyKilobotsEnv(KilobotsEnv):
         obj_spawn_location = self._obj_spawn_distribution.rvs()
 
         # create objects
-        # self._objects = [
-        #     CornerQuad(world=self.world, width=.15, height=.15, position=(.45, .605)),
-        #     CornerQuad(world=self.world, width=.15, height=.15, position=(.605, .605), rotation=-np.pi/2),
-        #     CornerQuad(world=self.world, width=.15, height=.15, position=(.605, .45), rotation=-np.pi),
-        #
-        #     CornerQuad(world=self.world, width=.15, height=.15, position=obj_spawn_location, rotation=-np.pi / 2)
-        # ]
+        self._objects = [
+            CornerQuad(world=self.world, width=.15, height=.15, position=(.45, .605)),
+            CornerQuad(world=self.world, width=.15, height=.15, position=(.605, .605), rotation=-np.pi/2),
+            CornerQuad(world=self.world, width=.15, height=.15, position=(.605, .45), rotation=-np.pi),
+
+            CornerQuad(world=self.world, width=.15, height=.15, position=obj_spawn_location, rotation=-np.pi / 2)
+        ]
 
         # create light
-        # self._lights = [CircularGradientLight(position=swarm_spawn_location)]
-        self._lights = [GradientLight(np.array([0, -.75]), np.array([0, +.75]))]
+        self._lights = [CircularGradientLight(position=(.0, .1))]  # swarm_spawn_location
+        # self._lights = [GradientLight(np.array([0, .75]), np.array([0, -.75]))]
 
         # create kilobots
         self._kilobots = [PhototaxisKilobot(self.world, position=(.0, .0), lights=self._lights)]

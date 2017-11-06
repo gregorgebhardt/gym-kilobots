@@ -20,9 +20,12 @@ class Light(object):
 
 
 class CircularGradientLight(Light):
-    def __init__(self, position: np.ndarray = None, radius=.2):
+    def __init__(self, position=None, radius=.2):
         super(CircularGradientLight, self).__init__()
-        self._position = position
+        if position is None:
+            self._position = np.array((.0, .0))
+        else:
+            self._position = position
         self._radius = radius
 
         self.action_space = spaces.Box(np.array([-.01, -.01]), np.array([.01, .01]))
@@ -31,9 +34,10 @@ class CircularGradientLight(Light):
         self._position += action
 
     def get_value(self, position: np.ndarray):
-        # TODO implement properly
         distance = np.linalg.norm(self._position - position)
-        return 255 * np.minimum(distance / self._radius, 1.)
+        if distance > self._radius:
+            return 0
+        return 255 * np.minimum(1 - distance / self._radius, 1.)
 
     def draw(self, viewer: rendering.Viewer):
         t = rendering.Transform(translation=self._position)

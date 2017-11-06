@@ -5,25 +5,16 @@ from gym.envs.classic_control import rendering
 
 
 class Body:
+    _density = 2
+    _friction = 0.01
+    _restitution = 0.0
 
-    """
-        scale_real_to_sim: scale factor to go from real world to
-            simulation coords (for numerical reasons)
-        scale_real_to_vis: scale factor to go from real world to
-            visualisation coords (meter to pixels)
-    """
+    _linear_damping = 8
+    _angular_damping = 8
 
     def __init__(self, world: Box2D.b2World, position=None, rotation=None):
         if self.__class__ == Body:
             raise NotImplementedError('Abstract class Body cannot be instantiated.')
-
-        self._density = 2
-        self._friction = 0.01
-        self._restitution = 0.0
-
-        self._linear_damping = 0.8
-        self._angular_damping = 0.8
-
         self._body_color = np.array((93, 133, 195)) / 255
         self._highlight_color = np.array((238, 80, 62)) / 255
 
