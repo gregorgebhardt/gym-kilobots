@@ -1,7 +1,6 @@
 import numpy as np
 import Box2D
 
-from gym.envs.classic_control import rendering
 from . import kb_rendering
 
 
@@ -117,8 +116,7 @@ class LetterForm(Body):
             # vertices = [(s * x, h - s * y) for (x, y) in vertices]
 
             viewer.draw_polygon(vertices, color=self._body_color)
-            t = rendering.Transform(translation=self._body.position)
-            viewer.draw_circle(10, 30, color=np.array((0, 255, 127))/255).add_attr(t)
+            viewer.draw_circle(self._body.position, .01, (0, 255, 127))
 
             # for a nice anti-aliased object outline
             # gfxdraw.aapolygon(screen, verts, self.object_color)

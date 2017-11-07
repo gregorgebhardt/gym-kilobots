@@ -1,5 +1,6 @@
 import numpy as np
 import pygame
+from pygame import gfxdraw
 pygame.init()
 
 
@@ -29,12 +30,16 @@ class KilobotsViewer(object):
         position = self._transform(position)
         radius = int(self._scale[0, 0] * radius)
         width = 0 if filled else int(self._scale[0, 0] * width)
-        pygame.draw.circle(self._window, color, position, radius, width)
+        gfxdraw.aacircle(self._window, position[0], position[1], radius, color)
+        gfxdraw.filled_circle(self._window, position[0], position[1], radius, color)
+        # pygame.draw.circle(self._window, color, position, radius, width)
 
     def draw_polygon(self, vertices, color=(0, 0, 0), filled=True, width=.01):
         vertices = [self._transform(v) for v in vertices]
         width = 0 if filled else int(self._scale[0, 0] * width)
-        pygame.draw.polygon(self._window, color, vertices, 0 if filled else width)
+        gfxdraw.aapolygon(self._window, vertices, color)
+        gfxdraw.filled_polygon(self._window, vertices, color)
+        # pygame.draw.polygon(self._window, color, vertices, 0 if filled else width)
 
     def draw_polyline(self, vertices, color=(0, 0, 0), closed=False, width=.01):
         vertices = [self._transform(v) for v in vertices]
