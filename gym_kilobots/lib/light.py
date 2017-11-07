@@ -2,7 +2,7 @@ import numpy as np
 
 from gym import spaces
 
-from gym.envs.classic_control import rendering
+from . import kb_rendering
 
 
 class Light(object):
@@ -15,7 +15,7 @@ class Light(object):
     def get_value(self, position: np.ndarray):
         raise NotImplementedError
 
-    def draw(self, viewer: rendering.Viewer):
+    def draw(self, viewer: kb_rendering.KilobotsViewer):
         raise NotImplementedError
 
 
@@ -39,9 +39,8 @@ class CircularGradientLight(Light):
             return 0
         return 255 * np.minimum(1 - distance / self._radius, 1.)
 
-    def draw(self, viewer: rendering.Viewer):
-        t = rendering.Transform(translation=self._position)
-        viewer.draw_circle(self._radius, color=np.array((255, 255, 30))/255).add_attr(t)
+    def draw(self, viewer: kb_rendering.KilobotsViewer):
+        viewer.draw_circle(position=self._position, radius=self._radius, color=(255, 255, 30, 150))
 
 
 class GradientLight(Light):
@@ -70,6 +69,6 @@ class GradientLight(Light):
 
         return min(projection * self._gradient_range + self._gradient_min, self._gradient_max)
 
-    def draw(self, viewer: rendering.Viewer):
+    def draw(self, viewer: kb_rendering.KilobotsViewer):
         # viewer.draw_polyline((self._gradient_start, self._gradient_end), color=(1, 0, 0))
         pass

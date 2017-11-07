@@ -2,6 +2,7 @@ import numpy as np
 import Box2D
 
 from gym.envs.classic_control import rendering
+from . import kb_rendering
 
 
 class Body:
@@ -15,8 +16,8 @@ class Body:
     def __init__(self, world: Box2D.b2World, position=None, rotation=None):
         if self.__class__ == Body:
             raise NotImplementedError('Abstract class Body cannot be instantiated.')
-        self._body_color = np.array((93, 133, 195)) / 255
-        self._highlight_color = np.array((238, 80, 62)) / 255
+        self._body_color = np.array((93, 133, 195))
+        self._highlight_color = np.array((238, 80, 62))
 
         if position is None:
             position = [.0, .0]
@@ -45,7 +46,7 @@ class Body:
     def get_orientation(self):
         return self._body.angle
 
-    def draw(self, screen):
+    def draw(self, viewer: kb_rendering.KilobotsViewer):
         raise NotImplementedError('The draw method needs to be implemented by the subclass of Body.')
 
 
@@ -62,7 +63,7 @@ class Quad(Body):
             friction=self._friction,
             restitution=self._restitution)
 
-    def draw(self, viewer: rendering.Viewer):
+    def draw(self, viewer: kb_rendering.KilobotsViewer):
         # h = viewer.height
         # s = self.scale_sim_to_vis
 
@@ -73,7 +74,7 @@ class Quad(Body):
 
 
 class CornerQuad(Quad):
-    def draw(self, viewer: rendering.Viewer):
+    def draw(self, viewer: kb_rendering.KilobotsViewer):
         super(CornerQuad, self).draw(viewer)
 
         # h = viewer.height
@@ -98,9 +99,8 @@ class Circle(Body):
             restitution=self._restitution
         )
 
-    def draw(self, viewer: rendering.Viewer):
-        t = rendering.Transform(translation=self._body.position)
-        viewer.draw_circle(self._radius, res=100, color=self._body_color).add_attr(t)
+    def draw(self, viewer: kb_rendering.KilobotsViewer):
+        viewer.draw_circle(position=self._body.position, radius=self._radius, color=self._body_color)
 
 
 class LetterForm(Body):
@@ -111,7 +111,7 @@ class LetterForm(Body):
         self._height = height
         self._fixture = []
 
-    def draw(self, viewer: rendering.Viewer):
+    def draw(self, viewer: kb_rendering.KilobotsViewer):
         for fixture in self._fixture:
             vertices = [self._body.transform * v for v in fixture.shape.vertices]
             # vertices = [(s * x, h - s * y) for (x, y) in vertices]

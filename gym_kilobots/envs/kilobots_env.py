@@ -19,18 +19,21 @@ from ..lib.light import Light, CircularGradientLight, GradientLight
 class KilobotsEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    WIDTH = 2.
-    HEIGHT = 1.5
+    world_size = world_width, world_height = 2., 1.5
 
-    SIM_STEP = 1. / 60
+    screen_size = screen_width, screen_height = 1200, 900
+
+    sim_step = 1. / 60
 
     def __init__(self):
         # create the Kilobots world in Box2D
         self.world = b2World(gravity=(0, 0), doSleep=True)
         table = self.world.CreateStaticBody(position=(.0, .0))
         table.CreateFixture(
-            shape=b2ChainShape(vertices=[(-self.WIDTH / 2, self.HEIGHT / 2), (-self.WIDTH / 2, -self.HEIGHT / 2),
-                                         (self.WIDTH / 2, -self.HEIGHT / 2), (self.WIDTH / 2, self.HEIGHT / 2)]))
+            shape=b2ChainShape(vertices=[(-self.world_width / 2, self.world_height / 2),
+                                         (-self.world_width / 2, -self.world_height / 2),
+                                         (self.world_width / 2, -self.world_height / 2),
+                                         (self.world_width / 2, self.world_height / 2)]))
 
         # add objects
         self._objects: [Body] = []
@@ -49,7 +52,7 @@ class KilobotsEnv(gym.Env):
         else:
             self.action_space = spaces.Tuple(())
 
-        self._viewer = None
+        self._screen = None
 
     def _configure_environment(self):
         pass
@@ -72,42 +75,42 @@ class KilobotsEnv(gym.Env):
 
         # step kilobots
         for k in self._kilobots:
-            k.step(self.SIM_STEP)
+            k.step(self.sim_step)
 
         # step world
-        self.world.Step(self.SIM_STEP, 60, 20)
+        self.world.Step(self.sim_step, 60, 20)
         self.world.ClearForces()
 
     def _render(self, mode='human', close=False):
         if close:
-            if self._viewer is not None:
-                self._viewer.close()
-                self._viewer = None
+            if self._screen is not None:
+                # self._screen.close()
+                self._screen = None
             return
 
-        from gym.envs.classic_control import rendering
-        if self._viewer is None:
-            self._viewer = rendering.Viewer(1200, 900)
-            self._viewer.set_bounds(-1.04, 1.04, -.78, .78)
+        from ..lib import kb_rendering
+        if self._screen is None:
+            self._screen = kb_rendering.KilobotsViewer(self.screen_width, self.screen_height)
+            self._screen.set_bounds(-1.04, 1.04, -.78, .78)
 
         # render table
-        self._viewer.draw_polygon([(-1.04, .78), (-1.04, -.78), (1.04, -.78), (1.04, .78)], color=(.3, .3, .3))
-        self._viewer.draw_polygon([(-1., .75), (-1., -.75), (1., -.75), (1., .75)], color=(1., 1., 1.))
-        self._viewer.draw_polyline([(-1., .75), (-1., -.75), (1., -.75), (1., .75), (-1., .75)], linewidth=.01)
+        self._screen.draw_polygon([(-1.04, .78), (-1.04, -.78), (1.04, -.78), (1.04, .78)], color=(75, 75, 75))
+        self._screen.draw_polygon([(-1., .75), (-1., -.75), (1., -.75), (1., .75)], color=(255, 255, 255))
+        self._screen.draw_polyline([(-1., .75), (-1., -.75), (1., -.75), (1., .75), (-1., .75)], width=.005)
 
         # render light
         for l in self._lights:
-            l.draw(self._viewer)
+            l.draw(self._screen)
 
         # render objects
         for o in self._objects:
-            o.draw(self._viewer)
+            o.draw(self._screen)
 
         # render kilobots
         for kb in self._kilobots:
-            kb.draw(self._viewer)
+            kb.draw(self._screen)
 
-        self._viewer.render()
+        self._screen.render()
 
 
 class QuadAssemblyKilobotsEnv(KilobotsEnv):

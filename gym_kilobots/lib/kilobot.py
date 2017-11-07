@@ -3,7 +3,7 @@ from Box2D import b2Vec2
 
 from .body import Circle
 
-from gym.envs.classic_control import rendering
+from . import kb_rendering
 
 import math, time
 
@@ -41,8 +41,8 @@ class Kilobot(Circle):
         self._motor_right = 0
         self.__light_measurement = 0
 
-        self._body_color = (.4, .4, .4)
-        self._highlight_color = (1., 1., 1.)
+        self._body_color = (100, 100, 100)
+        self._highlight_color = (255, 255, 255)
 
         self._lights = lights
 
@@ -107,7 +107,7 @@ class Kilobot(Circle):
         else:
             self._body.linearVelocity = linear_velocity
 
-    def draw(self, viewer: rendering.Viewer):
+    def draw(self, viewer: kb_rendering.KilobotsViewer):
         super(Kilobot, self).draw(viewer)
 
         # draw direction as triangle with color set by function
@@ -117,24 +117,24 @@ class Kilobot(Circle):
         bottom_left = self._body.GetWorldPoint((-0.006, -0.009))
         bottom_right = self._body.GetWorldPoint((0.006, -0.009))
 
-        viewer.draw_polygon((top, bottom_left, bottom_right), color=self._highlight_color)
+        viewer.draw_polygon(vertices=(top, bottom_left, bottom_right), color=self._highlight_color)
 
-        t = rendering.Transform(translation=self._body.GetWorldPoint(self._led))
-        viewer.draw_circle(.003, res=30, color=self._highlight_color).add_attr(t)
-        viewer.draw_circle(.003, res=30, color=(0, 0, 0), filled=False).add_attr(t)
-
-        # light sensor
-        t = rendering.Transform(translation=self._body.GetWorldPoint(self._light_sensor))
-        viewer.draw_circle(.004, res=30, color=(1, 1, 0)).add_attr(t)
-        viewer.draw_circle(.004, res=30, color=(0, 0, 0), filled=False).add_attr(t)
-
-        # draw legs
-        t = rendering.Transform(translation=self._body.GetWorldPoint(self._leg_front))
-        viewer.draw_circle(.002, res=30, color=(0, 0, 0)).add_attr(t)
-        t = rendering.Transform(translation=self._body.GetWorldPoint(self._leg_left))
-        viewer.draw_circle(.002, res=30, color=(0, 0, 0)).add_attr(t)
-        t = rendering.Transform(translation=self._body.GetWorldPoint(self._leg_right))
-        viewer.draw_circle(.002, res=30, color=(0, 0, 0)).add_attr(t)
+        # t = rendering.Transform(translation=self._body.GetWorldPoint(self._led))
+        # viewer.draw_circle(.003, res=20, color=self._highlight_color).add_attr(t)
+        # viewer.draw_circle(.003, res=20, color=(0, 0, 0), filled=False).add_attr(t)
+        #
+        # # light sensor
+        # t = rendering.Transform(translation=self._body.GetWorldPoint(self._light_sensor))
+        # viewer.draw_circle(.004, res=20, color=(1, 1, 0)).add_attr(t)
+        # viewer.draw_circle(.004, res=20, color=(0, 0, 0), filled=False).add_attr(t)
+        #
+        # # draw legs
+        # t = rendering.Transform(translation=self._body.GetWorldPoint(self._leg_front))
+        # viewer.draw_circle(.002, res=20, color=(0, 0, 0)).add_attr(t)
+        # t = rendering.Transform(translation=self._body.GetWorldPoint(self._leg_left))
+        # viewer.draw_circle(.002, res=20, color=(0, 0, 0)).add_attr(t)
+        # t = rendering.Transform(translation=self._body.GetWorldPoint(self._leg_right))
+        # viewer.draw_circle(.002, res=20, color=(0, 0, 0)).add_attr(t)
 
     def _setup(self):
         raise NotImplementedError('Kilobot subclass needs to implement _setup')
