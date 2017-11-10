@@ -40,7 +40,7 @@ class CircularGradientLight(Light):
         return 255 * np.minimum(1 - distance / self._radius, 1.)
 
     def draw(self, viewer: kb_rendering.KilobotsViewer):
-        viewer.draw_circle(position=self._position, radius=self._radius, color=(255, 255, 30, 150))
+        viewer.draw_aacircle(position=self._position, radius=self._radius, color=(255, 255, 30, 150))
 
 
 class GradientLight(Light):

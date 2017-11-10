@@ -1,5 +1,6 @@
 import numpy as np
 from Box2D import b2Vec2
+from numpy.ma.core import filled
 
 from .body import Circle
 
@@ -122,19 +123,15 @@ class Kilobot(Circle):
         # t = rendering.Transform(translation=self._body.GetWorldPoint(self._led))
         # viewer.draw_circle(.003, res=20, color=self._highlight_color).add_attr(t)
         # viewer.draw_circle(.003, res=20, color=(0, 0, 0), filled=False).add_attr(t)
-        #
-        # # light sensor
-        # t = rendering.Transform(translation=self._body.GetWorldPoint(self._light_sensor))
-        # viewer.draw_circle(.004, res=20, color=(1, 1, 0)).add_attr(t)
-        # viewer.draw_circle(.004, res=20, color=(0, 0, 0), filled=False).add_attr(t)
-        #
-        # # draw legs
-        # t = rendering.Transform(translation=self._body.GetWorldPoint(self._leg_front))
-        # viewer.draw_circle(.002, res=20, color=(0, 0, 0)).add_attr(t)
-        # t = rendering.Transform(translation=self._body.GetWorldPoint(self._leg_left))
-        # viewer.draw_circle(.002, res=20, color=(0, 0, 0)).add_attr(t)
-        # t = rendering.Transform(translation=self._body.GetWorldPoint(self._leg_right))
-        # viewer.draw_circle(.002, res=20, color=(0, 0, 0)).add_attr(t)
+
+        # light sensor
+        # viewer.draw_circle(position=self._body.GetWorldPoint(self._light_sensor), radius=.005, color=(0, 0, 0))
+        # viewer.draw_circle(position=self._body.GetWorldPoint(self._light_sensor), radius=.0035, color=(255, 255, 0))
+
+        # draw legs
+        # viewer.draw_circle(position=self._body.GetWorldPoint(self._leg_front), radius=.001, color=(0, 0, 0))
+        # viewer.draw_circle(position=self._body.GetWorldPoint(self._leg_left), radius=.001, color=(0, 0, 0))
+        # viewer.draw_circle(position=self._body.GetWorldPoint(self._leg_right), radius=.001, color=(0, 0, 0))
 
     def _setup(self):
         raise NotImplementedError('Kilobot subclass needs to implement _setup')
@@ -166,10 +163,8 @@ class PhototaxisKilobot(Kilobot):
         self.__update_counter += 1
 
         self.__light_measurement = self.get_ambientlight()
-        print(self.__light_measurement)
 
         if self.__light_measurement > self.__threshold:
-            print("switch directions...")
             self.__threshold = self.__light_measurement + 1
             self.__switch_directions()
 

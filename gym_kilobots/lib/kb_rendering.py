@@ -25,14 +25,19 @@ class KilobotsViewer(object):
     def _transform(self, position):
         return (self._scale.dot(position) + self._translation).astype(int)
 
-    # Convenience
+    def draw_aacircle(self, position=(0, 0), radius=.1, color=(0, 0, 0), filled=True, width=.01):
+        position = self._transform(position)
+        radius = int(self._scale[0, 0] * radius)
+        width = 0 if filled else int(self._scale[0, 0] * width)
+
+        pygame.draw.circle(self._window, color, position, radius, width)
+
     def draw_circle(self, position=(0, 0), radius=.1, color=(0, 0, 0), filled=True, width=.01):
         position = self._transform(position)
         radius = int(self._scale[0, 0] * radius)
         width = 0 if filled else int(self._scale[0, 0] * width)
-        gfxdraw.aacircle(self._window, position[0], position[1], radius, color)
-        gfxdraw.filled_circle(self._window, position[0], position[1], radius, color)
-        # pygame.draw.circle(self._window, color, position, radius, width)
+
+        pygame.draw.circle(self._window, color, position, radius, width)
 
     def draw_polygon(self, vertices, color=(0, 0, 0), filled=True, width=.01):
         vertices = [self._transform(v) for v in vertices]

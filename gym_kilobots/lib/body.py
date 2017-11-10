@@ -24,9 +24,6 @@ class Body:
         if rotation is None:
             rotation = .0
 
-        # self.scale_sim_to_vis = (1.0 / scale_real_to_sim) * scale_real_to_vis
-        # self.scale_real_to_sim = scale_real_to_sim
-
         self._world = world
         self._body = world.CreateDynamicBody(
             position=Box2D.b2Vec2(*position),
@@ -40,10 +37,13 @@ class Body:
         self._world.DestroyBody(self._body)
 
     def get_position(self):
-        return np.array([self._body.position])  # / scale_real_to_sim
+        return np.array([self._body.position])
 
     def get_orientation(self):
         return self._body.angle
+
+    def get_state(self):
+        return {'position': self.get_position(), 'orientation': self.get_orientation()}
 
     def draw(self, viewer: kb_rendering.KilobotsViewer):
         raise NotImplementedError('The draw method needs to be implemented by the subclass of Body.')
@@ -99,7 +99,7 @@ class Circle(Body):
         )
 
     def draw(self, viewer: kb_rendering.KilobotsViewer):
-        viewer.draw_circle(position=self._body.position, radius=self._radius, color=self._body_color)
+        viewer.draw_aacircle(position=self._body.position, radius=self._radius, color=self._body_color)
 
 
 class LetterForm(Body):
@@ -116,7 +116,7 @@ class LetterForm(Body):
             # vertices = [(s * x, h - s * y) for (x, y) in vertices]
 
             viewer.draw_polygon(vertices, color=self._body_color)
-            viewer.draw_circle(self._body.position, .01, (0, 255, 127))
+            viewer.draw_aacircle(self._body.position, .01, (0, 255, 127))
 
             # for a nice anti-aliased object outline
             # gfxdraw.aapolygon(screen, verts, self.object_color)
