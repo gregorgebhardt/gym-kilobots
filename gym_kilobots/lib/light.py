@@ -15,6 +15,9 @@ class Light(object):
     def get_value(self, position: np.ndarray):
         raise NotImplementedError
 
+    def get_state(self):
+        raise NotImplementedError
+
     def draw(self, viewer: kb_rendering.KilobotsViewer):
         raise NotImplementedError
 
@@ -28,7 +31,9 @@ class CircularGradientLight(Light):
             self._position = position
         self._radius = radius
 
-        self.action_space = spaces.Box(np.array([-.01, -.01]), np.array([.01, .01]))
+        self.action_space = spaces.Box(np.array([-.005, -.005]), np.array([.005, .005]))
+
+        # TODO add limits
 
     def step(self, action: np.ndarray):
         self._position += action
@@ -39,8 +44,15 @@ class CircularGradientLight(Light):
             return 0
         return 255 * np.minimum(1 - distance / self._radius, 1.)
 
+    def get_state(self):
+        return self._position
+
     def draw(self, viewer: kb_rendering.KilobotsViewer):
         viewer.draw_aacircle(position=self._position, radius=self._radius, color=(255, 255, 30, 150))
+
+
+class SmoothGridLight(Light):
+    pass
 
 
 class GradientLight(Light):
@@ -68,6 +80,9 @@ class GradientLight(Light):
             return self._gradient_min
 
         return min(projection * self._gradient_range + self._gradient_min, self._gradient_max)
+
+    def get_state(self):
+        return None
 
     def draw(self, viewer: kb_rendering.KilobotsViewer):
         # viewer.draw_polyline((self._gradient_start, self._gradient_end), color=(1, 0, 0))

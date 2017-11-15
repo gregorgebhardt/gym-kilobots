@@ -18,10 +18,10 @@ class Kilobot(Circle):
     _light_sensor = np.array([.0, -_radius+.001])
     _led = np.array([.011, .01])
 
-    _impulse_right_dir = _leg_front - _leg_right
-    _impulse_left_dir = _leg_front - _leg_left
-    _impulse_right_point_body = (_leg_front + _leg_right) / 2
-    _impulse_left_point_body = (_leg_front + _leg_left) / 2
+    # _impulse_right_dir = _leg_front - _leg_right
+    # _impulse_left_dir = _leg_front - _leg_left
+    # _impulse_right_point_body = (_leg_front + _leg_right) / 2
+    # _impulse_left_point_body = (_leg_front + _leg_left) / 2
 
     _max_linear_velocity = 0.01  # meters / s
     _max_angular_velocity = 0.2 * math.pi  # radians / s
@@ -148,7 +148,7 @@ class PhototaxisKilobot(Kilobot):
         self.__threshold = 0
         self.__turn_direction = None
         self.__last_update = .0
-        self.__update_interval = 60
+        self.__update_interval = 30
         self.__update_counter = 0
 
     def _setup(self):

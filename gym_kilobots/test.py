@@ -3,10 +3,11 @@ import gym_kilobots
 
 import numpy as np
 
-env = gym.make('Kilobots-v0')
+env = gym.make('Kilobots-Empty-Unite-v0')
 env.reset()
 
-for _ in range(2000):
+for t in range(2000):
     env.render()
-    env.step((np.array((.0, .0)),))
-    # env.step(env.action_space.sample())
+    # state, reward, done, info = env.step((np.array((.0, .0)),))
+    state, reward, done, info = env.step(env.action_space.sample())
+    # print("{}: {}".format(t, reward))

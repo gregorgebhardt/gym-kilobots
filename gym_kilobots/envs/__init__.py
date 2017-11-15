@@ -1,1 +1,1 @@
-from .kilobots_env import KilobotsEnv, QuadAssemblyKilobotsEnv
+from .kilobots_empty_envs import UniteKilobotsEnv

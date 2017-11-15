@@ -43,7 +43,8 @@ class Body:
         return self._body.angle
 
     def get_state(self):
-        return {'position': self.get_position(), 'orientation': self.get_orientation()}
+        return np.array([*self._body.position] + [self._body.angle])
+        # return {'position': self.get_position(), 'orientation': self.get_orientation()}
 
     def draw(self, viewer: kb_rendering.KilobotsViewer):
         raise NotImplementedError('The draw method needs to be implemented by the subclass of Body.')

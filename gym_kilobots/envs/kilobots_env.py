@@ -1,44 +1,47 @@
-import time
+import gym
+from gym.utils import seeding
+from gym import error, spaces, utils
 
 import numpy as np
-from scipy import stats
 
-import gym
-from gym import error, spaces, utils
-from gym.utils import seeding
-
-from Box2D import b2World, b2ChainShape, b2Vec2
+from Box2D import b2World, b2ChainShape
 
 # import os, signal
 
-from ..lib.body import Body, CornerQuad
-from ..lib.kilobot import Kilobot, PhototaxisKilobot
-from ..lib.light import Light, CircularGradientLight, GradientLight
+from ..lib.body import Body
+from ..lib.kilobot import Kilobot
+from ..lib.light import Light
 
 
 class KilobotsEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
     world_size = world_width, world_height = 2., 1.5
-
     screen_size = screen_width, screen_height = 1200, 900
-
     sim_step = 1. / 60
+
+    @property
+    def world_x_range(self):
+        return -self.world_width / 2, self.world_width / 2
+
+    @property
+    def world_y_range(self):
+        return -self.world_height / 2, self.world_height / 2
 
     def __init__(self):
         # create the Kilobots world in Box2D
         self.world = b2World(gravity=(0, 0), doSleep=True)
         table = self.world.CreateStaticBody(position=(.0, .0))
         table.CreateFixture(
-            shape=b2ChainShape(vertices=[(-self.world_width / 2, self.world_height / 2),
-                                         (-self.world_width / 2, -self.world_height / 2),
-                                         (self.world_width / 2, -self.world_height / 2),
-                                         (self.world_width / 2, self.world_height / 2)]))
+            shape=b2ChainShape(vertices=[(self.world_x_range[0], self.world_y_range[1]),
+                                         (self.world_x_range[0], self.world_y_range[0]),
+                                         (self.world_x_range[1], self.world_y_range[0]),
+                                         (self.world_x_range[1], self.world_y_range[1])]))
 
-        # add objects
-        self._objects: [Body] = []
         # add kilobots
         self._kilobots: [Kilobot] = []
+        # add objects
+        self._objects: [Body] = []
         # add light
         self._lights: [Light] = []
 
@@ -52,21 +55,34 @@ class KilobotsEnv(gym.Env):
         else:
             self.action_space = spaces.Tuple(())
 
+        # construct observation space
+        kb_low = np.array([[self.world_x_range[0], self.world_y_range[0], -np.inf]] * len(self._kilobots))
+        kb_high = np.array([[self.world_x_range[1], self.world_y_range[1], np.inf]] * len(self._kilobots))
+        kb_observation_space = spaces.Box(low=kb_low, high=kb_high)
+
+        objects_low = np.array([[self.world_x_range[0], self.world_y_range[0], -np.inf]] * len(self._objects))
+        objects_high = np.array([[self.world_x_range[1], self.world_y_range[1], np.inf]] * len(self._objects))
+        objects_observation_space = spaces.Box(low=objects_low, high=objects_high)
+
+        # TODO rewrite light to be one object only that gives its observation and action space
+
+        self.observation_space = spaces.Tuple([kb_observation_space, objects_observation_space])
+
         self._screen = None
 
     def _configure_environment(self):
         pass
 
     def _get_state(self):
-        return {'kilobots': [k.get_state() for k in self._kilobots],
-                'objects': [o.get_state() for o in self._objects],
-                'lights': [l.get_state() for l in self._lights]}
+        return {'kilobots': np.array([k.get_state() for k in self._kilobots]),
+                'objects': np.array([o.get_state() for o in self._objects]),
+                'lights': np.array([l.get_state() for l in self._lights])}
 
-    def _compute_reward(self, state, action):
+    def _reward(self, state, action):
         pass
 
     def _has_finished(self, state, action):
-        pass
+        return False
 
     def _get_info(self, state, action):
         pass
@@ -99,10 +115,10 @@ class KilobotsEnv(gym.Env):
         state = self._get_state()
 
         # reward
-        reward = self._compute_reward(state, action) or None
+        reward = self._reward(state, action) or None
 
         # done
-        done = self._has_finished(state) or None
+        done = self._has_finished(state, action) or None
 
         # info
         info = self._get_info(state, action) or None
@@ -141,42 +157,3 @@ class KilobotsEnv(gym.Env):
         self._screen.render()
 
 
-class QuadAssemblyKilobotsEnv(KilobotsEnv):
-    def __init__(self):
-        # distribution for sampling swarm position
-        self._swarm_spawn_distribution = stats.uniform(loc=(-.95, -.7), scale=(.9, 1.4))
-        # distribution for sampling the pushing object
-        self._obj_spawn_distribution = stats.uniform(loc=(.05, -.7), scale=(.9, .65))
-
-        super().__init__()
-
-    def _configure_environment(self):
-        # sample swarm spawn location
-        swarm_spawn_location = self._swarm_spawn_distribution.rvs()
-
-        # sample object location
-        obj_spawn_location = self._obj_spawn_distribution.rvs()
-
-        # create objects
-        self._objects = [
-            CornerQuad(world=self.world, width=.15, height=.15, position=(.45, .605)),
-            CornerQuad(world=self.world, width=.15, height=.15, position=(.605, .605), rotation=-np.pi/2),
-            CornerQuad(world=self.world, width=.15, height=.15, position=(.605, .45), rotation=-np.pi),
-
-            CornerQuad(world=self.world, width=.15, height=.15, position=obj_spawn_location, rotation=-np.pi / 2)
-        ]
-
-        # create light
-        self._lights = [CircularGradientLight(position=swarm_spawn_location)]  # swarm_spawn_location
-        # self._lights = [GradientLight(np.array([0, .75]), np.array([0, -.75]))]
-
-        # create kilobots
-        self._kilobots = [PhototaxisKilobot(self.world, position=swarm_spawn_location + (.0, .0), lights=self._lights),
-                          PhototaxisKilobot(self.world, position=swarm_spawn_location + (.03, .0), lights=self._lights),
-                          PhototaxisKilobot(self.world, position=swarm_spawn_location + (.0, .03), lights=self._lights),
-                          PhototaxisKilobot(self.world, position=swarm_spawn_location + (-.03, .0), lights=self._lights),
-                          PhototaxisKilobot(self.world, position=swarm_spawn_location + (.0, -.03), lights=self._lights)]
-
-    # TODO implement reward function
-    # TODO implement has_finished function
-    # TODO implement info function???
