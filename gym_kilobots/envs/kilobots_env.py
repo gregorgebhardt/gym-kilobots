@@ -3,6 +3,7 @@ from gym.utils import seeding
 from gym import error, spaces, utils
 
 import numpy as np
+import pandas as pd
 
 from Box2D import b2World, b2ChainShape
 
@@ -11,6 +12,8 @@ from Box2D import b2World, b2ChainShape
 from ..lib.body import Body
 from ..lib.kilobot import Kilobot
 from ..lib.light import Light
+
+import abc
 
 
 class KilobotsEnv(gym.Env):
@@ -43,17 +46,17 @@ class KilobotsEnv(gym.Env):
         # add objects
         self._objects: [Body] = []
         # add light
-        self._lights: [Light] = []
+        self._light: Light = None
 
         self.action_space = None
         self.observation_space = None
 
         self._configure_environment()
 
-        if len(self._lights) > 0:
-            self.action_space = spaces.Tuple(list(l.action_space for l in self._lights if l.action_space is not None))
+        if self._light is not None:
+            self.action_space = self._light.action_space
         else:
-            self.action_space = spaces.Tuple(())
+            self.action_space = None
 
         # construct observation space
         kb_low = np.array([[self.world_x_range[0], self.world_y_range[0], -np.inf]] * len(self._kilobots))
@@ -64,33 +67,34 @@ class KilobotsEnv(gym.Env):
         objects_high = np.array([[self.world_x_range[1], self.world_y_range[1], np.inf]] * len(self._objects))
         objects_observation_space = spaces.Box(low=objects_low, high=objects_high)
 
-        # TODO rewrite light to be one object only that gives its observation and action space
-
-        self.observation_space = spaces.Tuple([kb_observation_space, objects_observation_space])
+        self.observation_space = spaces.Tuple([kb_observation_space, objects_observation_space,
+                                               self._light.observation_space])
 
         self._screen = None
 
+    @abc.abstractmethod
     def _configure_environment(self):
-        pass
+        raise NotImplementedError
 
     def _get_state(self):
         return {'kilobots': np.array([k.get_state() for k in self._kilobots]),
                 'objects': np.array([o.get_state() for o in self._objects]),
-                'lights': np.array([l.get_state() for l in self._lights])}
+                'light': self._light.get_state()}
 
+    @abc.abstractmethod
     def _reward(self, state, action):
-        pass
+        raise NotImplementedError
 
     def _has_finished(self, state, action):
         return False
 
     def _get_info(self, state, action):
-        pass
+        return None
 
     def _destroy(self):
         del self._objects[:]
         del self._kilobots[:]
-        del self._lights[:]
+        del self._light
 
     def _reset(self):
         self._destroy()
@@ -100,8 +104,7 @@ class KilobotsEnv(gym.Env):
         assert self.action_space.contains(action), "%r (%s) invalid " % (action, type(action))
 
         # step light
-        for l, a in zip(self._lights, action):
-            l.step(a)
+        self._light.step(action)
 
         # step kilobots
         for k in self._kilobots:
@@ -143,8 +146,7 @@ class KilobotsEnv(gym.Env):
         self._screen.draw_polyline([(-1., .75), (-1., -.75), (1., -.75), (1., .75), (-1., .75)], width=.005)
 
         # render light
-        for l in self._lights:
-            l.draw(self._screen)
+        self._light.draw(self._screen)
 
         # render objects
         for o in self._objects:
@@ -156,4 +158,11 @@ class KilobotsEnv(gym.Env):
 
         self._screen.render()
 
+    def get_index(self):
+        kilobot_index = pd.MultiIndex.from_product([range(len(self._kilobots)), ['x', 'y', 'theta']],
+                                                   names=['idx', 'dim'])
+        objects_index = pd.MultiIndex.from_product([range(len(self._objects)), ['x', 'y', 'theta']],
+                                                   names=['idx', 'dim'])
+        light_index = self._light.get_index()
 
+        return kilobot_index, objects_index, light_index

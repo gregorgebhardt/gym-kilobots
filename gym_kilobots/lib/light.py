@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 from gym import spaces
 
@@ -21,9 +22,12 @@ class Light(object):
     def draw(self, viewer: kb_rendering.KilobotsViewer):
         raise NotImplementedError
 
+    def get_index(self):
+        raise NotImplementedError
+
 
 class CircularGradientLight(Light):
-    def __init__(self, position=None, radius=.2):
+    def __init__(self, position=None, radius=.2, bounds: (np.ndarray, np.ndarray) = None):
         super(CircularGradientLight, self).__init__()
         if position is None:
             self._position = np.array((.0, .0))
@@ -31,12 +35,18 @@ class CircularGradientLight(Light):
             self._position = position
         self._radius = radius
 
-        self.action_space = spaces.Box(np.array([-.005, -.005]), np.array([.005, .005]))
+        if bounds is not None:
+            self._bounds = bounds
+        else:
+            self._bounds = np.array([-np.inf, -np.inf]), np.array([np.inf, np.inf])
 
-        # TODO add limits
+        self.action_space = spaces.Box(np.array([-.005, -.005]), np.array([.005, .005]))
+        self.observation_space = spaces.Box(*self._bounds)
 
     def step(self, action: np.ndarray):
         self._position += action
+        self._position = np.maximum(self._position, self._bounds[0])
+        self._position = np.minimum(self._position, self._bounds[1])
 
     def get_value(self, position: np.ndarray):
         distance = np.linalg.norm(self._position - position)
@@ -47,15 +57,35 @@ class CircularGradientLight(Light):
     def get_state(self):
         return self._position
 
+    def get_index(self):
+        return pd.Index(['x', 'y'])
+
     def draw(self, viewer: kb_rendering.KilobotsViewer):
         viewer.draw_aacircle(position=self._position, radius=self._radius, color=(255, 255, 30, 150))
 
 
 class SmoothGridLight(Light):
-    pass
+    def __init__(self):
+        super(SmoothGridLight, self).__init__()
+
+    def step(self, action):
+        raise NotImplementedError
+
+    def get_value(self, position: np.ndarray):
+        raise NotImplementedError
+
+    def get_state(self):
+        raise NotImplementedError
+
+    def get_index(self):
+        raise NotImplementedError
+
+    def draw(self, viewer: kb_rendering.KilobotsViewer):
+        raise NotImplementedError
 
 
 class GradientLight(Light):
+    # TODO change to angular representation and add angular displacement as action
     def __init__(self, gradient_start: np.ndarray = np.ndarray([0, 0]), gradient_end: np.ndarray = np.ndarray([0, 1]),
                  gradient_min: int = 0, gradient_max: int = 1024):
         super().__init__()
@@ -83,6 +113,9 @@ class GradientLight(Light):
 
     def get_state(self):
         return None
+
+    def get_index(self):
+        raise NotImplementedError
 
     def draw(self, viewer: kb_rendering.KilobotsViewer):
         # viewer.draw_polyline((self._gradient_start, self._gradient_end), color=(1, 0, 0))

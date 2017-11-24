@@ -22,11 +22,11 @@ class UniteKilobotsEnv(KilobotsEnv):
 
     def _configure_environment(self):
         # create light
-        self._lights = [CircularGradientLight(position=self._light_spawn_distribution.rvs(), radius=.2)]
+        self._light = CircularGradientLight(position=self._light_spawn_distribution.rvs(), radius=.2)
 
         # create kilobots
         self._kilobots = [PhototaxisKilobot(self.world, position=self._kilobots_spawn_distribution.rvs(),
-                                            lights=self._lights) for _ in range(self._num_kilobots)]
+                                            light=self._light) for _ in range(self._num_kilobots)]
 
     def _has_finished(self, state, action):
         positions = state['kilobots'][:, :2]

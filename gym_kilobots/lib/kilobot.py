@@ -33,7 +33,7 @@ class Kilobot(Circle):
     _linear_damping = .8
     _angular_damping = .8
 
-    def __init__(self, world, position=None, rotation=None, lights=None):
+    def __init__(self, world, position=None, rotation=None, light=None):
         # all parameters in real world units
         super().__init__(world=world, position=position, rotation=rotation, radius=self._radius)
 
@@ -45,16 +45,16 @@ class Kilobot(Circle):
         self._body_color = (100, 100, 100)
         self._highlight_color = (255, 255, 255)
 
-        self._lights = lights
+        self._light = light
 
         self._setup()
 
     def get_ambientlight(self):
-        if self._lights is not None:
+        if self._light is not None:
             sensor_position = self._body.GetWorldPoint((0.0, -self._radius))
-            light_measurements = [l.get_value(sensor_position) for l in self._lights]
+            light_measurement = self._light.get_value(sensor_position)
             # todo add noise here
-            return int(max(light_measurements))
+            return light_measurement
         else:
             return 0
 
