@@ -12,7 +12,7 @@ class Body:
     _linear_damping = 8
     _angular_damping = 8
 
-    def __init__(self, world: Box2D.b2World, position=None, rotation=None):
+    def __init__(self, world: Box2D.b2World, position=None, orientation=None):
         if self.__class__ == Body:
             raise NotImplementedError('Abstract class Body cannot be instantiated.')
         self._body_color = np.array((93, 133, 195))
@@ -21,13 +21,13 @@ class Body:
         if position is None:
             position = [.0, .0]
 
-        if rotation is None:
-            rotation = .0
+        if orientation is None:
+            orientation = .0
 
         self._world = world
         self._body = world.CreateDynamicBody(
             position=Box2D.b2Vec2(*position),
-            angle=rotation,
+            angle=orientation,
             linearDamping=self._linear_damping,
             angularDamping=self._angular_damping)
         self._body.linearVelocity = Box2D.b2Vec2(*[.0, .0])
@@ -102,6 +102,9 @@ class Circle(Body):
 
     def draw(self, viewer: kb_rendering.KilobotsViewer):
         viewer.draw_aacircle(position=self._body.position, radius=self._radius, color=self._body_color)
+
+    def get_radius(self):
+        return self._radius
 
 
 class LetterForm(Body):

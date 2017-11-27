@@ -40,7 +40,7 @@ class CircularGradientLight(Light):
         else:
             self._bounds = np.array([-np.inf, -np.inf]), np.array([np.inf, np.inf])
 
-        self.action_space = spaces.Box(np.array([-.005, -.005]), np.array([.005, .005]))
+        self.action_space = spaces.Box(np.array([-.001, -.001]), np.array([.001, .001]))
         self.observation_space = spaces.Box(*self._bounds)
 
     def step(self, action: np.ndarray):

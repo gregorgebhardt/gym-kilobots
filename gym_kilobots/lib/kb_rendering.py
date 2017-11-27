@@ -11,6 +11,7 @@ class KilobotsViewer(object):
 
         self._window = pygame.display.set_mode((width, height), pygame.HWSURFACE | pygame.DOUBLEBUF)
         pygame.display.set_caption(caption)
+        pygame.event.set_allowed(pygame.QUIT)
 
         self._scale = np.eye(2)
         self._translation = np.zeros(2)
@@ -61,5 +62,14 @@ class KilobotsViewer(object):
         image_data = pygame.surfarray.array3d(self._window)
         return image_data
 
-    def render(self):
+    @staticmethod
+    def render():
         pygame.display.flip()
+
+    @staticmethod
+    def close_requested():
+        return pygame.event.peek(pygame.QUIT)
+
+    @staticmethod
+    def close():
+        pygame.display.quit()

@@ -31,6 +31,11 @@ class KilobotsEnv(gym.Env):
     def world_y_range(self):
         return -self.world_height / 2, self.world_height / 2
 
+    @property
+    def world_bounds(self):
+        return (np.array([-self.world_width / 2, -self.world_height / 2]),
+                np.array([self.world_width / 2, self.world_height / 2]))
+
     def __init__(self):
         # create the Kilobots world in Box2D
         self.world = b2World(gravity=(0, 0), doSleep=True)
@@ -72,6 +77,8 @@ class KilobotsEnv(gym.Env):
 
         self._screen = None
 
+        self.__seed = None
+
     def _add_kilobot(self, kilobot: Kilobot):
         self._kilobots.append(kilobot)
 
@@ -101,6 +108,18 @@ class KilobotsEnv(gym.Env):
         del self._objects[:]
         del self._kilobots[:]
         del self._light
+        self._light = None
+        if self._screen is not None:
+            del self._screen
+            self._screen = None
+
+    def _close(self):
+        self._destroy()
+
+    def _seed(self, seed=None):
+        if seed is not None:
+            self.__seed = seed
+        return self.__seed
 
     def _reset(self):
         self._destroy()
@@ -124,27 +143,31 @@ class KilobotsEnv(gym.Env):
         state = self._get_state()
 
         # reward
-        reward = self._reward(state, action) or None
+        reward = self._reward(state, action)
 
         # done
-        done = self._has_finished(state, action) or None
+        done = self._has_finished(state, action)
 
         # info
-        info = self._get_info(state, action) or None
+        info = self._get_info(state, action)
 
         return state, reward, done, info
 
     def _render(self, mode='human', close=False):
         if close:
             if self._screen is not None:
-                # self._screen.close()
+                self._screen.close()
                 self._screen = None
             return
 
         from ..lib import kb_rendering
         if self._screen is None:
-            self._screen = kb_rendering.KilobotsViewer(self.screen_width, self.screen_height)
+            self._screen = kb_rendering.KilobotsViewer(self.screen_width, self.screen_height, caption=self.spec.id)
             self._screen.set_bounds(-1.04, 1.04, -.78, .78)
+        elif self._screen.close_requested():
+            self._screen.close()
+            self._screen = None
+            # TODO how to handle this event?
 
         # render table
         self._screen.draw_polygon([(-1.04, .78), (-1.04, -.78), (1.04, -.78), (1.04, .78)], color=(75, 75, 75))

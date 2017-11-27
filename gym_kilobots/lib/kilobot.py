@@ -33,9 +33,9 @@ class Kilobot(Circle):
     _linear_damping = .8
     _angular_damping = .8
 
-    def __init__(self, world, position=None, rotation=None, light=None):
+    def __init__(self, world, position=None, orientation=None, light=None):
         # all parameters in real world units
-        super().__init__(world=world, position=position, rotation=rotation, radius=self._radius)
+        super().__init__(world=world, position=position, orientation=orientation, radius=self._radius)
 
         # 0 .. 255
         self._motor_left = 0
@@ -133,6 +133,10 @@ class Kilobot(Circle):
         # viewer.draw_circle(position=self._body.GetWorldPoint(self._leg_left), radius=.001, color=(0, 0, 0))
         # viewer.draw_circle(position=self._body.GetWorldPoint(self._leg_right), radius=.001, color=(0, 0, 0))
 
+    @classmethod
+    def get_radius(cls):
+        return cls._radius
+
     def _setup(self):
         raise NotImplementedError('Kilobot subclass needs to implement _setup')
 
@@ -141,8 +145,8 @@ class Kilobot(Circle):
 
 
 class PhototaxisKilobot(Kilobot):
-    def __init__(self, *args, **kwargs):
-        super(PhototaxisKilobot, self).__init__(*args, **kwargs)
+    def __init__(self, world, position=None, orientation=None, light=None):
+        super(PhototaxisKilobot, self).__init__(world=world, position=position, orientation=orientation, light=light)
 
         self.__light_measurement = 0
         self.__threshold = 0
