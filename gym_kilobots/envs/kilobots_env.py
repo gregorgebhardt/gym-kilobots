@@ -72,6 +72,12 @@ class KilobotsEnv(gym.Env):
 
         self._screen = None
 
+    def _add_kilobot(self, kilobot: Kilobot):
+        self._kilobots.append(kilobot)
+
+    def _add_object(self, object: Body):
+        self._objects.append(object)
+
     @abc.abstractmethod
     def _configure_environment(self):
         raise NotImplementedError
