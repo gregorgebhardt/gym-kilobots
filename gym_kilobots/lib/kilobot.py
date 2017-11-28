@@ -169,7 +169,7 @@ class PhototaxisKilobot(Kilobot):
         self.__light_measurement = self.get_ambientlight()
 
         if self.__light_measurement > self.__threshold:
-            self.__threshold = self.__light_measurement + 1
+            self.__threshold = self.__light_measurement - 1
             self.__switch_directions()
 
     def __switch_directions(self):

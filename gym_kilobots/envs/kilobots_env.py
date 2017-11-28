@@ -21,7 +21,18 @@ class KilobotsEnv(gym.Env):
 
     world_size = world_width, world_height = 2., 1.5
     screen_size = screen_width, screen_height = 1200, 900
-    sim_step = 1. / 60
+
+    __sim_steps_per_second = 60
+    __sim_velocity_iterations = 60
+    __sim_position_iterations = 20
+
+    @property
+    def sim_steps_per_second(self):
+        return self.__sim_steps_per_second
+
+    @property
+    def sim_step(self):
+        return 1. / self.__sim_steps_per_second
 
     @property
     def world_x_range(self):
@@ -82,8 +93,8 @@ class KilobotsEnv(gym.Env):
     def _add_kilobot(self, kilobot: Kilobot):
         self._kilobots.append(kilobot)
 
-    def _add_object(self, object: Body):
-        self._objects.append(object)
+    def _add_object(self, body: Body):
+        self._objects.append(body)
 
     @abc.abstractmethod
     def _configure_environment(self):
@@ -128,16 +139,23 @@ class KilobotsEnv(gym.Env):
     def _step(self, action):
         assert self.action_space.contains(action), "%r (%s) invalid " % (action, type(action))
 
-        # step light
-        self._light.step(action)
+        for i in range(20):
+            # step light
+            if i == 0:
+                self._light.step(action)
+            else:
+                self._light.step(np.zeros(2))
 
-        # step kilobots
-        for k in self._kilobots:
-            k.step(self.sim_step)
+            # step kilobots
+            for k in self._kilobots:
+                k.step(self.sim_step)
 
-        # step world
-        self.world.Step(self.sim_step, 60, 20)
-        self.world.ClearForces()
+            # step world
+            self.world.Step(self.sim_step, self.__sim_velocity_iterations, self.__sim_position_iterations)
+            self.world.ClearForces()
+
+            if self._screen is not None:
+                self.render()
 
         # state
         state = self._get_state()

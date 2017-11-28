@@ -9,6 +9,7 @@ from . import kb_rendering
 class Light(object):
     def __init__(self):
         self.action_space = None
+        self.observation_space = None
         
     def step(self, action):
         raise NotImplementedError
