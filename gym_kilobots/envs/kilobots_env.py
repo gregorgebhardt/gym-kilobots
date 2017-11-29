@@ -25,6 +25,7 @@ class KilobotsEnv(gym.Env):
     __sim_steps_per_second = 60
     __sim_velocity_iterations = 60
     __sim_position_iterations = 20
+    __steps_per_action = 20
 
     @property
     def sim_steps_per_second(self):
@@ -100,7 +101,7 @@ class KilobotsEnv(gym.Env):
     def _configure_environment(self):
         raise NotImplementedError
 
-    def _get_state(self):
+    def get_state(self):
         return {'kilobots': np.array([k.get_state() for k in self._kilobots]),
                 'objects': np.array([o.get_state() for o in self._objects]),
                 'light': self._light.get_state()}
@@ -139,7 +140,7 @@ class KilobotsEnv(gym.Env):
     def _step(self, action):
         assert self.action_space.contains(action), "%r (%s) invalid " % (action, type(action))
 
-        for i in range(20):
+        for i in range(self.__steps_per_action):
             # step light
             if i == 0:
                 self._light.step(action)
@@ -158,7 +159,7 @@ class KilobotsEnv(gym.Env):
                 self.render()
 
         # state
-        state = self._get_state()
+        state = self.get_state()
 
         # reward
         reward = self._reward(state, action)
@@ -170,6 +171,10 @@ class KilobotsEnv(gym.Env):
         info = self._get_info(state, action)
 
         return state, reward, done, info
+
+    def _step_world(self):
+        self.world.Step(self.sim_step, self.__sim_velocity_iterations, self.__sim_position_iterations)
+        self.world.ClearForces()
 
     def _render(self, mode='human', close=False):
         if close:
