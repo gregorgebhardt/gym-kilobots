@@ -28,7 +28,7 @@ class Light(object):
 
 
 class CircularGradientLight(Light):
-    def __init__(self, position=None, radius=.2, bounds: (np.ndarray, np.ndarray) = None):
+    def __init__(self, position: np.ndarray = None, radius=.2, bounds: (np.ndarray, np.ndarray) = None):
         super(CircularGradientLight, self).__init__()
         if position is None:
             self._position = np.array((.0, .0))
@@ -41,7 +41,7 @@ class CircularGradientLight(Light):
         else:
             self._bounds = np.array([-np.inf, -np.inf]), np.array([np.inf, np.inf])
 
-        self.action_space = spaces.Box(np.array([-.001, -.001]), np.array([.001, .001]))
+        self.action_space = spaces.Box(np.array([-.01, -.01]), np.array([.01, .01]))
         self.observation_space = spaces.Box(*self._bounds)
 
     def step(self, action: np.ndarray):

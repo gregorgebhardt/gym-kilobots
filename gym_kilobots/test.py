@@ -14,7 +14,7 @@ light_frames = []
 reward = []
 
 for t in range(2000):
-    # env.render()
+    env.render()
     # state, reward, done, info = env.step((np.array((.0, .0)),))
     state_t, reward_t, done, info = env.step(env.action_space.sample())
 

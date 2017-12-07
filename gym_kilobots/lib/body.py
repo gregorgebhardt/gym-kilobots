@@ -37,7 +37,7 @@ class Body:
         self._world.DestroyBody(self._body)
 
     def get_position(self):
-        return np.array([self._body.position])
+        return np.array(self._body.position)
 
     def get_orientation(self):
         return self._body.angle
