@@ -27,14 +27,13 @@ class Light(object):
         raise NotImplementedError
 
 
-class CircularGradientLight(Light):
-    def __init__(self, position: np.ndarray = None, radius=.2, bounds: (np.ndarray, np.ndarray) = None):
-        super(CircularGradientLight, self).__init__()
+class SinglePositionLight(Light):
+    def __init__(self, position: np.ndarray = None, bounds: (np.ndarray, np.ndarray) = None):
+        super().__init__()
         if position is None:
             self._position = np.array((.0, .0))
         else:
             self._position = position
-        self._radius = radius
 
         if bounds is not None:
             self._bounds = bounds
@@ -48,6 +47,24 @@ class CircularGradientLight(Light):
         self._position += action
         self._position = np.maximum(self._position, self._bounds[0])
         self._position = np.minimum(self._position, self._bounds[1])
+
+    def get_value(self, position: np.ndarray):
+        return -np.linalg.norm(self._position - position)
+
+    def get_state(self):
+        return self._position
+
+    def get_index(self):
+        return pd.Index(['x', 'y'])
+
+    def draw(self, viewer: kb_rendering.KilobotsViewer):
+        viewer.draw_aacircle(position=self._position, radius=.01, color=(255, 30, 30, 150))
+
+
+class CircularGradientLight(SinglePositionLight):
+    def __init__(self, position: np.ndarray = None, bounds: (np.ndarray, np.ndarray) = None, radius=.2):
+        super().__init__(position, bounds)
+        self._radius = radius
 
     def get_value(self, position: np.ndarray):
         distance = np.linalg.norm(self._position - position)
@@ -87,13 +104,19 @@ class SmoothGridLight(Light):
 
 class GradientLight(Light):
     # TODO change to angular representation and add angular displacement as action
-    def __init__(self, gradient_start: np.ndarray = np.ndarray([0, 0]), gradient_end: np.ndarray = np.ndarray([0, 1]),
+    def __init__(self, gradient_start: np.ndarray = None, gradient_end: np.ndarray = None,
                  gradient_min: int = 0, gradient_max: int = 1024):
         super().__init__()
 
-        self._gradient_start = gradient_start.copy()
-        self._gradient_end = gradient_end.copy()
-        self._gradient_vec = gradient_end - gradient_start
+        self._gradient_start = gradient_start
+        if self._gradient_start is None:
+            self._gradient_start = np.array([0, 0])
+
+        self._gradient_end = gradient_end
+        if self._gradient_end is None:
+            self._gradient_end = np.array([0, 1])
+
+        self._gradient_vec = self._gradient_end - self._gradient_start
         assert gradient_max > gradient_min
         self._gradient_min = gradient_min
         self._gradient_max = gradient_max
@@ -103,7 +126,7 @@ class GradientLight(Light):
         pass
 
     def get_value(self, position: np.ndarray):
-        query_point = position - self._gradient_start
+        query_point = position - self._gradient_start.astype(float)
         projection = self._gradient_vec.dot(query_point)
         projection /= np.linalg.norm(self._gradient_vec)**2
 

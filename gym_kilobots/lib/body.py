@@ -62,7 +62,8 @@ class Quad(Body):
             box=Box2D.b2Vec2(self._width/2, self._height/2),
             density=self._density,
             friction=self._friction,
-            restitution=self._restitution)
+            restitution=self._restitution,
+            radius=.001)
 
     def draw(self, viewer: kb_rendering.KilobotsViewer):
         # h = viewer.height
@@ -101,7 +102,7 @@ class Circle(Body):
         )
 
     def draw(self, viewer: kb_rendering.KilobotsViewer):
-        viewer.draw_aacircle(position=self._body.position, radius=self._radius, color=self._body_color)
+        viewer.draw_circle(position=self._body.position, radius=self._radius, color=self._body_color)
 
     def get_radius(self):
         return self._radius
@@ -143,12 +144,14 @@ class LForm(LetterForm):
             shape=Box2D.b2PolygonShape(vertices=v1.tolist()),
             density=self._density,
             friction=self._friction,
-            restitution=self._restitution)
+            restitution=self._restitution,
+            radius=.001)
         self._body.CreatePolygonFixture(
             shape=Box2D.b2PolygonShape(vertices=v2.tolist()),
             density=self._density,
             friction=self._friction,
-            restitution=self._restitution)
+            restitution=self._restitution,
+            radius=.001)
 
         self._fixture = self._body.fixtures
 
@@ -166,12 +169,14 @@ class TForm(LetterForm):
             shape=Box2D.b2PolygonShape(vertices=v1.tolist()),
             density=self._density,
             friction=self._friction,
-            restitution=self._restitution)
+            restitution=self._restitution,
+            radius=.001)
         self._body.CreatePolygonFixture(
             shape=Box2D.b2PolygonShape(vertices=v2.tolist()),
             density=self._density,
             friction=self._friction,
-            restitution=self._restitution)
+            restitution=self._restitution,
+            radius=.001)
 
         self._fixture = self._body.fixtures
 
@@ -191,16 +196,19 @@ class CForm(LetterForm):
             shape=Box2D.b2PolygonShape(vertices=v1.tolist()),
             density=self._density,
             friction=self._friction,
-            restitution=self._restitution)
+            restitution=self._restitution,
+            radius=.001)
         self._body.CreatePolygonFixture(
             shape=Box2D.b2PolygonShape(vertices=v2.tolist()),
             density=self._density,
             friction=self._friction,
-            restitution=self._restitution)
+            restitution=self._restitution,
+            radius=.001)
         self._body.CreatePolygonFixture(
             shape=Box2D.b2PolygonShape(vertices=v3.tolist()),
             density=self._density,
             friction=self._friction,
-            restitution=self._restitution)
+            restitution=self._restitution,
+            radius=.001)
 
         self._fixture = self._body.fixtures

@@ -25,6 +25,8 @@ class KilobotsEnv(gym.Env):
     __sim_steps_per_second = 60
     __sim_velocity_iterations = 60
     __sim_position_iterations = 20
+    __sim_steps = 0
+    __viz_steps_per_second = 20
     __steps_per_action = 20
 
     @property
@@ -57,6 +59,7 @@ class KilobotsEnv(gym.Env):
                                          (self.world_x_range[0], self.world_y_range[0]),
                                          (self.world_x_range[1], self.world_y_range[0]),
                                          (self.world_x_range[1], self.world_y_range[1])]))
+        table.fixtures[0].shape.radius = .001
 
         # add kilobots
         self._kilobots: [Kilobot] = []
@@ -114,7 +117,7 @@ class KilobotsEnv(gym.Env):
         return False
 
     def _get_info(self, state, action):
-        return None
+        return ""
 
     def _destroy(self):
         del self._objects[:]
@@ -138,7 +141,8 @@ class KilobotsEnv(gym.Env):
         self._configure_environment()
 
     def _step(self, action):
-        assert self.action_space.contains(action), "%r (%s) invalid " % (action, type(action))
+        if self.action_space:
+            assert self.action_space.contains(action), "%r (%s) invalid " % (action, type(action))
 
         for i in range(self.__steps_per_action):
             # step light
@@ -154,6 +158,8 @@ class KilobotsEnv(gym.Env):
             # step world
             self.world.Step(self.sim_step, self.__sim_velocity_iterations, self.__sim_position_iterations)
             self.world.ClearForces()
+
+            self.__sim_steps += 1
 
             if self._screen is not None:
                 self.render()
@@ -183,19 +189,26 @@ class KilobotsEnv(gym.Env):
                 self._screen = None
             return
 
+        if self.__sim_steps % self.__sim_steps_per_second // self.__viz_steps_per_second:
+            return
+
         from ..lib import kb_rendering
         if self._screen is None:
             self._screen = kb_rendering.KilobotsViewer(self.screen_width, self.screen_height, caption=self.spec.id)
-            self._screen.set_bounds(-1.04, 1.04, -.78, .78)
+            world_min, world_max = self.world_bounds
+            self._screen.set_bounds(world_min[0], world_max[0], world_min[1], world_max[1])
         elif self._screen.close_requested():
             self._screen.close()
             self._screen = None
             # TODO how to handle this event?
 
         # render table
-        self._screen.draw_polygon([(-1.04, .78), (-1.04, -.78), (1.04, -.78), (1.04, .78)], color=(75, 75, 75))
-        self._screen.draw_polygon([(-1., .75), (-1., -.75), (1., -.75), (1., .75)], color=(255, 255, 255))
-        self._screen.draw_polyline([(-1., .75), (-1., -.75), (1., -.75), (1., .75), (-1., .75)], width=.005)
+        x_min, x_max = self.world_x_range
+        y_min, y_max = self.world_y_range
+        self._screen.draw_polygon([(x_min, y_max), (x_min, y_min), (x_max, y_min), (x_max, y_max)],
+                                  color=(255, 255, 255))
+        self._screen.draw_polyline([(x_min, y_max), (x_min, y_min), (x_max, y_min), (x_max, y_max), (x_min, y_max)],
+                                   width=.003)
 
         # render light
         self._light.draw(self._screen)

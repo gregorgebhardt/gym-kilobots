@@ -39,24 +39,23 @@ class QuadAssemblyKilobotsEnv(KilobotsEnv):
         # create objects
         self._objects = [
             CornerQuad(world=self.world, width=.15, height=.15, position=(.45, .605)),
-            CornerQuad(world=self.world, width=.15, height=.15, position=(.605, .605), rotation=-np.pi / 2),
-            CornerQuad(world=self.world, width=.15, height=.15, position=(.605, .45), rotation=-np.pi),
-
-            CornerQuad(world=self.world, width=.15, height=.15, position=obj_spawn_location, rotation=-np.pi / 2)
+            CornerQuad(world=self.world, width=.15, height=.15, position=(.605, .605), orientation=-np.pi / 2),
+            CornerQuad(world=self.world, width=.15, height=.15, position=(.605, .45), orientation=-np.pi),
+            CornerQuad(world=self.world, width=.15, height=.15, position=obj_spawn_location, orientation=-np.pi / 2)
         ]
 
         # create light
-        self._lights = [CircularGradientLight(position=swarm_spawn_location)]  # swarm_spawn_location
+        self._light = CircularGradientLight(position=swarm_spawn_location)  # swarm_spawn_location
         # self._lights = [GradientLight(np.array([0, .75]), np.array([0, -.75]))]
 
         # create kilobots
-        self._kilobots = [PhototaxisKilobot(self.world, position=swarm_spawn_location + (.0, .0), lights=self._lights),
-                          PhototaxisKilobot(self.world, position=swarm_spawn_location + (.03, .0), lights=self._lights),
-                          PhototaxisKilobot(self.world, position=swarm_spawn_location + (.0, .03), lights=self._lights),
+        self._kilobots = [PhototaxisKilobot(self.world, position=swarm_spawn_location + (.0, .0), light=self._light),
+                          PhototaxisKilobot(self.world, position=swarm_spawn_location + (.03, .0), light=self._light),
+                          PhototaxisKilobot(self.world, position=swarm_spawn_location + (.0, .03), light=self._light),
                           PhototaxisKilobot(self.world, position=swarm_spawn_location + (-.03, .0),
-                                            lights=self._lights),
+                                            light=self._light),
                           PhototaxisKilobot(self.world, position=swarm_spawn_location + (.0, -.03),
-                                            lights=self._lights)]
+                                            light=self._light)]
 
     # TODO implement has_finished function
     def _has_finished(self, state, action):

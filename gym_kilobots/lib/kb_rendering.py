@@ -24,7 +24,7 @@ class KilobotsViewer(object):
         self._translation = np.array([-left * scale_x, -bottom * scale_y])
 
     def _transform(self, position):
-        return (self._scale.dot(position) + self._translation).astype(int)
+        return np.round(self._scale.dot(position) + self._translation).astype(int)
 
     def draw_aacircle(self, position=(0, 0), radius=.1, color=(0, 0, 0), filled=True, width=.01):
         position = self._transform(position)
@@ -43,9 +43,9 @@ class KilobotsViewer(object):
     def draw_polygon(self, vertices, color=(0, 0, 0), filled=True, width=.01):
         vertices = [self._transform(v) for v in vertices]
         width = 0 if filled else int(self._scale[0, 0] * width)
-        gfxdraw.aapolygon(self._window, vertices, color)
-        gfxdraw.filled_polygon(self._window, vertices, color)
-        # pygame.draw.polygon(self._window, color, vertices, 0 if filled else width)
+        # gfxdraw.aapolygon(self._window, vertices, color)
+        # gfxdraw.filled_polygon(self._window, vertices, color)
+        pygame.draw.polygon(self._window, color, vertices, 0 if filled else width)
 
     def draw_polyline(self, vertices, color=(0, 0, 0), closed=False, width=.01):
         vertices = [self._transform(v) for v in vertices]

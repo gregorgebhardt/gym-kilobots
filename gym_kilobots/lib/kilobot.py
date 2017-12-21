@@ -41,6 +41,7 @@ class Kilobot(Circle):
         self._motor_left = 0
         self._motor_right = 0
         self.__light_measurement = 0
+        self.__turn_direction = None
 
         self._body_color = (100, 100, 100)
         self._highlight_color = (255, 255, 255)
@@ -58,11 +59,27 @@ class Kilobot(Circle):
         else:
             return 0
 
-    def set_motors(self, left, right):
+    def _set_motors(self, left, right):
         self._motor_left = left
         self._motor_right = right
 
-    def set_color(self, color):
+    def _switch_directions(self):
+        if self.__turn_direction == 'left':
+            self._turn_right()
+        else:
+            self._turn_left()
+
+    def _turn_right(self):
+        self.__turn_direction = 'right'
+        self._set_motors(0, 255)
+        self._set_color((255, 0, 0))
+
+    def _turn_left(self):
+        self.__turn_direction = 'left'
+        self._set_motors(255, 0)
+        self._set_color((0, 255, 0))
+
+    def _set_color(self, color):
         self._highlight_color = color
 
     def step(self, time_step):
@@ -110,15 +127,18 @@ class Kilobot(Circle):
 
     def draw(self, viewer: kb_rendering.KilobotsViewer):
         super(Kilobot, self).draw(viewer)
+        # viewer.draw_circle(position=self._body.position, radius=self._radius, color=(50,) * 3, filled=False)
 
         # draw direction as triangle with color set by function
-        top = self._body.GetWorldPoint((0.0, self._radius-.003))
+        top = self._body.GetWorldPoint((0.0, self._radius - .005))
         # w = 0.1 * self._radius
         # h = np.cos(np.arcsin(w)) - self._radius
-        bottom_left = self._body.GetWorldPoint((-0.006, -0.009))
-        bottom_right = self._body.GetWorldPoint((0.006, -0.009))
+        # bottom_left = self._body.GetWorldPoint((-0.006, -0.009))
+        # bottom_right = self._body.GetWorldPoint((0.006, -0.009))
+        middle = self.get_position()
 
-        viewer.draw_polygon(vertices=(top, bottom_left, bottom_right), color=self._highlight_color)
+        # viewer.draw_polygon(vertices=(top, bottom_left, bottom_right), color=self._highlight_color)
+        viewer.draw_polyline(vertices=(top, middle), color=self._highlight_color, closed=False, width=.005)
 
         # t = rendering.Transform(translation=self._body.GetWorldPoint(self._led))
         # viewer.draw_circle(.003, res=20, color=self._highlight_color).add_attr(t)
@@ -144,19 +164,54 @@ class Kilobot(Circle):
         raise NotImplementedError('Kilobot subclass needs to implement _loop')
 
 
+class SimplePhototaxisKilobot(Kilobot):
+    def __init__(self, world, position=None, orientation=None, light=None):
+        super().__init__(world=world, position=position, orientation=orientation, light=light)
+
+        self.last_light = 0
+        self.turn_cw = 1
+        self.counter = 0
+
+        self.env = world
+
+    def _setup(self):
+        self._turn_left()
+
+    def _loop(self):
+        pos_real = np.array(self._body.GetWorldPoint((0.0, -self._radius)))
+
+        dist = np.linalg.norm(pos_real - self._light.get_state())
+
+        current_light = 1.0 - dist
+
+        # TODO better phototaxis algorithm?
+        if dist > 0.01:
+            if current_light > self.last_light:
+                self.counter = 0
+                self._switch_directions()
+            else:
+                self.counter = self.counter + 1
+
+            self.last_light = current_light
+
+        # else:
+            # self._set_motors(0, 0)
+
+
 class PhototaxisKilobot(Kilobot):
     def __init__(self, world, position=None, orientation=None, light=None):
         super(PhototaxisKilobot, self).__init__(world=world, position=position, orientation=orientation, light=light)
 
         self.__light_measurement = 0
-        self.__threshold = 0
-        self.__turn_direction = None
+        self.__threshold = -np.inf
         self.__last_update = .0
         self.__update_interval = 30
         self.__update_counter = 0
+        self.__no_change_counter = 0
+        self.__no_change_threshold = 15
 
     def _setup(self):
-        self.__turn_left()
+        self._turn_left()
 
     def _loop(self):
 
@@ -168,22 +223,9 @@ class PhototaxisKilobot(Kilobot):
 
         self.__light_measurement = self.get_ambientlight()
 
-        if self.__light_measurement > self.__threshold:
-            self.__threshold = self.__light_measurement - 3
-            self.__switch_directions()
-
-    def __switch_directions(self):
-        if self.__turn_direction == 'left':
-            self.__turn_right()
+        if self.__light_measurement > self.__threshold or self.__no_change_counter >= self.__no_change_threshold:
+            self.__threshold = self.__light_measurement  #- 3
+            self._switch_directions()
+            self.__no_change_counter = 0
         else:
-            self.__turn_left()
-
-    def __turn_right(self):
-        self.__turn_direction = 'right'
-        self.set_motors(0, 255)
-        self.set_color((255, 0, 0))
-
-    def __turn_left(self):
-        self.__turn_direction = 'left'
-        self.set_motors(255, 0)
-        self.set_color((0, 255, 0))
+            self.__no_change_counter += 1
