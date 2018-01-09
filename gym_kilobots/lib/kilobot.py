@@ -197,6 +197,16 @@ class SimplePhototaxisKilobot(Kilobot):
         # else:
             # self._set_motors(0, 0)
 
+    def step(self, time_step):
+        movement_direction = self._light.get_state() - self.get_position()
+
+        n = np.linalg.norm(movement_direction)
+        if n > 0.01:
+            movement_direction = movement_direction / n * 0.01
+
+        self._body.linearVelocity = b2Vec2(*movement_direction.astype(float))
+        self._body.linearDamping = .0
+
 
 class PhototaxisKilobot(Kilobot):
     def __init__(self, world, position=None, orientation=None, light=None):

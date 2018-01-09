@@ -4,7 +4,7 @@ import numpy as np
 from scipy import stats
 
 from ..lib.body import CornerQuad
-from ..lib.kilobot import PhototaxisKilobot
+from ..lib.kilobot import PhototaxisKilobot, SimplePhototaxisKilobot
 from ..lib.light import CircularGradientLight
 
 
@@ -49,27 +49,26 @@ class QuadAssemblyKilobotsEnv(KilobotsEnv):
         # self._lights = [GradientLight(np.array([0, .75]), np.array([0, -.75]))]
 
         # create kilobots
-        self._kilobots = [PhototaxisKilobot(self.world, position=swarm_spawn_location + (.0, .0), light=self._light),
-                          PhototaxisKilobot(self.world, position=swarm_spawn_location + (.03, .0), light=self._light),
-                          PhototaxisKilobot(self.world, position=swarm_spawn_location + (.0, .03), light=self._light),
+        self._kilobots = [PhototaxisKilobot(self.world, position=swarm_spawn_location + (.0, .0),
+                                                  light=self._light),
+                          PhototaxisKilobot(self.world, position=swarm_spawn_location + (.03, .0),
+                                                  light=self._light),
+                          PhototaxisKilobot(self.world, position=swarm_spawn_location + (.0, .03),
+                                                  light=self._light),
                           PhototaxisKilobot(self.world, position=swarm_spawn_location + (-.03, .0),
-                                            light=self._light),
+                                                  light=self._light),
                           PhototaxisKilobot(self.world, position=swarm_spawn_location + (.0, -.03),
-                                            light=self._light)]
+                                                  light=self._light)]
 
     # TODO implement has_finished function
     def _has_finished(self, state, action):
         return False
 
     # TODO implement reward function
-    def _reward(self, state, action):
+    def _reward(self, state, action, new_state):
         # compute reward based on task and swarm state
         return 1.
 
     # info function
     def _get_info(self, state, action):
         return None
-
-
-
-

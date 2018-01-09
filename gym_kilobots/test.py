@@ -3,8 +3,8 @@ import gym_kilobots
 
 import pandas as pd
 
-env = gym.make('Kilobots-Empty-Unite-v0')
-# env = gym.make('Kilobots-QuadAssembly-v0')
+# env = gym.make('Kilobots-Empty-Unite-v0')
+env = gym.make('Kilobots-QuadAssembly-v0')
 env.reset()
 
 # kilobot_index, object_index, light_index = env.get_index()

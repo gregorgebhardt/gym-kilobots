@@ -22,12 +22,12 @@ class KilobotsEnv(gym.Env):
     world_size = world_width, world_height = 2., 1.5
     screen_size = screen_width, screen_height = 1200, 900
 
-    __sim_steps_per_second = 60
-    __sim_velocity_iterations = 60
-    __sim_position_iterations = 20
+    __sim_steps_per_second = 10
+    __sim_velocity_iterations = 10
+    __sim_position_iterations = 10
     __sim_steps = 0
     __viz_steps_per_second = 20
-    __steps_per_action = 20
+    __steps_per_action = 10
 
     @property
     def sim_steps_per_second(self):
@@ -110,7 +110,7 @@ class KilobotsEnv(gym.Env):
                 'light': self._light.get_state()}
 
     @abc.abstractmethod
-    def _reward(self, state, action):
+    def _reward(self, state, action, new_state):
         raise NotImplementedError
 
     def _has_finished(self, state, action):
@@ -139,10 +139,13 @@ class KilobotsEnv(gym.Env):
     def _reset(self):
         self._destroy()
         self._configure_environment()
+        self.__sim_steps = 0
 
     def _step(self, action):
         if self.action_space:
             assert self.action_space.contains(action), "%r (%s) invalid " % (action, type(action))
+
+        state = self.get_state()
 
         for i in range(self.__steps_per_action):
             # step light
@@ -165,16 +168,16 @@ class KilobotsEnv(gym.Env):
                 self.render()
 
         # state
-        state = self.get_state()
+        new_state = self.get_state()
 
         # reward
-        reward = self._reward(state, action)
+        reward = self._reward(state, action, new_state)
 
         # done
-        done = self._has_finished(state, action)
+        done = self._has_finished(new_state, action)
 
         # info
-        info = self._get_info(state, action)
+        info = self._get_info(new_state, action)
 
         return state, reward, done, info
 
