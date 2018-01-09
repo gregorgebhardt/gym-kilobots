@@ -89,13 +89,13 @@ class Kilobot(Circle):
         cos_dir = np.cos(self.get_orientation())
         sin_dir = np.sin(self.get_orientation())
 
-        linear_velocity = np.zeros(2)
+        linear_velocity = [.0, .0]
         angular_velocity = .0
 
         # compute new kilobot position or kilobot velocity
         if self._motor_left and self._motor_right:
             linear_velocity = (self._motor_right + self._motor_left) / 510. * self._max_linear_velocity
-            linear_velocity = np.array([sin_dir, cos_dir]) * linear_velocity
+            linear_velocity = [sin_dir * linear_velocity, cos_dir * linear_velocity]
 
             angular_velocity = (self._motor_right - self._motor_left) / 510. * self._max_angular_velocity
 
@@ -104,9 +104,9 @@ class Kilobot(Circle):
             angular_displacement = angular_velocity * time_step
 
             c, s = np.cos(angular_displacement), np.sin(angular_displacement)
-            R = np.array([[c, -s], [s, c]])
+            R = [[c, -s], [s, c]]
 
-            translation = self._leg_left - R.dot(self._leg_left)
+            translation = self._leg_left - np.dot(R, self._leg_left)
             linear_velocity = self._body.GetWorldVector(translation) / time_step
 
         elif self._motor_left:
@@ -114,9 +114,9 @@ class Kilobot(Circle):
             angular_displacement = angular_velocity * time_step
 
             c, s = np.cos(angular_displacement), np.sin(angular_displacement)
-            R = np.array([[c, -s], [s, c]])
+            R = [[c, -s], [s, c]]
 
-            translation = self._leg_right - R.dot(self._leg_right)
+            translation = self._leg_right - np.dot(R, self._leg_right)
             linear_velocity = self._body.GetWorldVector(translation) / time_step
 
         self._body.angularVelocity = angular_velocity

@@ -58,7 +58,28 @@ class QuadAssemblyKilobotsEnv(KilobotsEnv):
                           PhototaxisKilobot(self.world, position=swarm_spawn_location + (-.03, .0),
                                                   light=self._light),
                           PhototaxisKilobot(self.world, position=swarm_spawn_location + (.0, -.03),
-                                                  light=self._light)]
+                                                  light=self._light),
+                          PhototaxisKilobot(self.world, position=swarm_spawn_location + (.0, .0),
+                                            light=self._light),
+                          PhototaxisKilobot(self.world, position=swarm_spawn_location + (.03, .0),
+                                            light=self._light),
+                          PhototaxisKilobot(self.world, position=swarm_spawn_location + (.0, .03),
+                                            light=self._light),
+                          PhototaxisKilobot(self.world, position=swarm_spawn_location + (-.03, .0),
+                                            light=self._light),
+                          PhototaxisKilobot(self.world, position=swarm_spawn_location + (.0, -.03),
+                                            light=self._light),
+                          PhototaxisKilobot(self.world, position=swarm_spawn_location + (.0, .0),
+                                            light=self._light),
+                          PhototaxisKilobot(self.world, position=swarm_spawn_location + (.03, .0),
+                                            light=self._light),
+                          PhototaxisKilobot(self.world, position=swarm_spawn_location + (.0, .03),
+                                            light=self._light),
+                          PhototaxisKilobot(self.world, position=swarm_spawn_location + (-.03, .0),
+                                            light=self._light),
+                          PhototaxisKilobot(self.world, position=swarm_spawn_location + (.0, -.03),
+                                            light=self._light)
+                          ]
 
     # TODO implement has_finished function
     def _has_finished(self, state, action):

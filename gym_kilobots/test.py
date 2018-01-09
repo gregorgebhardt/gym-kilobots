@@ -15,7 +15,7 @@ env.reset()
 # reward = []
 
 for t in range(2000):
-    env.render()
+    # env.render()
     # state, reward, done, info = env.step(None)
     state_t, reward_t, done, info = env.step(env.action_space.sample())
 

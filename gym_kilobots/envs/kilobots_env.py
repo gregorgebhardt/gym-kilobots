@@ -29,26 +29,36 @@ class KilobotsEnv(gym.Env):
     __viz_steps_per_second = 20
     __steps_per_action = 10
 
-    @property
-    def sim_steps_per_second(self):
-        return self.__sim_steps_per_second
+    def __new__(cls, *args, **kwargs):
+        cls.sim_steps_per_second = cls.__sim_steps_per_second
+        cls.sim_step = 1. / cls.__sim_steps_per_second
+        cls.world_x_range = -cls.world_width / 2, cls.world_width / 2
+        cls.world_y_range = -cls.world_height / 2, cls.world_height / 2
+        cls.world_bounds = (np.array([-cls.world_width / 2, -cls.world_height / 2]),
+                            np.array([cls.world_width / 2, cls.world_height / 2]))
 
-    @property
-    def sim_step(self):
-        return 1. / self.__sim_steps_per_second
+        return super(KilobotsEnv, cls).__new__(cls, *args, **kwargs)
 
-    @property
-    def world_x_range(self):
-        return -self.world_width / 2, self.world_width / 2
-
-    @property
-    def world_y_range(self):
-        return -self.world_height / 2, self.world_height / 2
-
-    @property
-    def world_bounds(self):
-        return (np.array([-self.world_width / 2, -self.world_height / 2]),
-                np.array([self.world_width / 2, self.world_height / 2]))
+    # @property
+    # def sim_steps_per_second(self):
+    #     return self.__sim_steps_per_second
+    #
+    # @property
+    # def sim_step(self):
+    #     return 1. / self.__sim_steps_per_second
+    #
+    # @property
+    # def world_x_range(self):
+    #     return -self.world_width / 2, self.world_width / 2
+    #
+    # @property
+    # def world_y_range(self):
+    #     return -self.world_height / 2, self.world_height / 2
+    #
+    # @property
+    # def world_bounds(self):
+    #     return (np.array([-self.world_width / 2, -self.world_height / 2]),
+    #             np.array([self.world_width / 2, self.world_height / 2]))
 
     def __init__(self):
         # create the Kilobots world in Box2D

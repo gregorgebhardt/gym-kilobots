@@ -37,18 +37,16 @@ class Body:
         self._world.DestroyBody(self._body)
 
     def get_position(self):
-        return np.array(self._body.position)
+        return (*self._body.position,)
 
     def get_orientation(self):
         return self._body.angle
 
     def get_pose(self):
-        return np.r_[self._body.position, self._body.angle]
+        return (*self._body.position, self._body.angle)
 
-    def get_state(self, as_dict=False):
-        if as_dict:
-            return {'x': self._body.position[0], 'y': self._body.position[1], 'theta': self._body.angle}
-        return np.r_[self._body.position, self._body.angle]
+    def get_state(self):
+        return (*self._body.position, self._body.angle)
 
     def draw(self, viewer: kb_rendering.KilobotsViewer):
         raise NotImplementedError('The draw method needs to be implemented by the subclass of Body.')
