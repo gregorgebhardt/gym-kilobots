@@ -135,7 +135,7 @@ class Kilobot(Circle):
         # h = np.cos(np.arcsin(w)) - self._radius
         # bottom_left = self._body.GetWorldPoint((-0.006, -0.009))
         # bottom_right = self._body.GetWorldPoint((0.006, -0.009))
-        middle = self.get_position()
+        middle = self._body.position
 
         # viewer.draw_polygon(vertices=(top, bottom_left, bottom_right), color=self._highlight_color)
         viewer.draw_polyline(vertices=(top, middle), color=self._highlight_color, closed=False, width=.005)
@@ -198,9 +198,10 @@ class SimplePhototaxisKilobot(Kilobot):
             # self._set_motors(0, 0)
 
     def step(self, time_step):
-        movement_direction = self._light.get_state() - self.get_position()
+        movement_direction = self._light.get_state() - self._body.position
 
-        n = np.linalg.norm(movement_direction)
+        n = np.sqrt(np.dot(movement_direction, movement_direction))
+        # n = np.linalg.norm(movement_direction)
         if n > 0.01:
             movement_direction = movement_direction / n * 0.01
 
@@ -215,7 +216,7 @@ class PhototaxisKilobot(Kilobot):
         self.__light_measurement = 0
         self.__threshold = -np.inf
         self.__last_update = .0
-        self.__update_interval = 30
+        self.__update_interval = 5
         self.__update_counter = 0
         self.__no_change_counter = 0
         self.__no_change_threshold = 15
