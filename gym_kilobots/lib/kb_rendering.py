@@ -1,6 +1,6 @@
 import numpy as np
 import pygame
-from pygame import gfxdraw
+# from pygame import gfxdraw
 pygame.init()
 
 

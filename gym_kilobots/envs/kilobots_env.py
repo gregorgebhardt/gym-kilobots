@@ -1,6 +1,14 @@
 import gym
-from gym.utils import seeding
+# from gym.utils import seeding
 from gym import error, spaces, utils
+
+import sys
+import logging
+gym.undo_logger_setup()
+formatter = logging.Formatter('[%(asctime)s] %(message)s')
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(formatter)
+logging.getLogger().addHandler(handler)
 
 import numpy as np
 import pandas as pd
@@ -38,27 +46,6 @@ class KilobotsEnv(gym.Env):
                             np.array([cls.world_width / 2, cls.world_height / 2]))
 
         return super(KilobotsEnv, cls).__new__(cls, *args, **kwargs)
-
-    # @property
-    # def sim_steps_per_second(self):
-    #     return self.__sim_steps_per_second
-    #
-    # @property
-    # def sim_step(self):
-    #     return 1. / self.__sim_steps_per_second
-    #
-    # @property
-    # def world_x_range(self):
-    #     return -self.world_width / 2, self.world_width / 2
-    #
-    # @property
-    # def world_y_range(self):
-    #     return -self.world_height / 2, self.world_height / 2
-    #
-    # @property
-    # def world_bounds(self):
-    #     return (np.array([-self.world_width / 2, -self.world_height / 2]),
-    #             np.array([self.world_width / 2, self.world_height / 2]))
 
     def __init__(self):
         # create the Kilobots world in Box2D
@@ -119,14 +106,17 @@ class KilobotsEnv(gym.Env):
                 'objects': np.array([o.get_state() for o in self._objects]),
                 'light': self._light.get_state()}
 
+    def get_observation(self):
+        return self.get_state()
+
     @abc.abstractmethod
-    def _reward(self, state, action, new_state):
+    def get_reward(self, state, action, new_state):
         raise NotImplementedError
 
-    def _has_finished(self, state, action):
+    def has_finished(self, state, action):
         return False
 
-    def _get_info(self, state, action):
+    def get_info(self, state, action):
         return ""
 
     def _destroy(self):
@@ -151,11 +141,14 @@ class KilobotsEnv(gym.Env):
         self._configure_environment()
         self.__sim_steps = 0
 
+        return self.get_observation()
+
     def _step(self, action):
         if self.action_space:
             assert self.action_space.contains(action), "%r (%s) invalid " % (action, type(action))
 
-        state = self.get_state()
+        # state before action is applied
+        old_state = self.get_state()
 
         for i in range(self.__steps_per_action):
             # step light
@@ -180,16 +173,19 @@ class KilobotsEnv(gym.Env):
         # state
         new_state = self.get_state()
 
+        # observation
+        observation = self.get_observation()
+
         # reward
-        reward = self._reward(state, action, new_state)
+        reward = self.get_reward(old_state, action, new_state)
 
         # done
-        done = self._has_finished(new_state, action)
+        done = self.has_finished(new_state, action)
 
         # info
-        info = self._get_info(new_state, action)
+        info = self.get_info(new_state, action)
 
-        return state, reward, done, info
+        return observation, reward, done, info
 
     def _step_world(self):
         self.world.Step(self.sim_step, self.__sim_velocity_iterations, self.__sim_position_iterations)

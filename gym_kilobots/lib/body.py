@@ -1,8 +1,6 @@
 import numpy as np
 import Box2D
 
-from . import kb_rendering
-
 
 class Body:
     _density = 2
@@ -48,7 +46,7 @@ class Body:
     def get_state(self):
         return (*self._body.position, self._body.angle)
 
-    def draw(self, viewer: kb_rendering.KilobotsViewer):
+    def draw(self, viewer):
         raise NotImplementedError('The draw method needs to be implemented by the subclass of Body.')
 
 
@@ -66,7 +64,7 @@ class Quad(Body):
             restitution=self._restitution,
             radius=.001)
 
-    def draw(self, viewer: kb_rendering.KilobotsViewer):
+    def draw(self, viewer):
         # h = viewer.height
         # s = self.scale_sim_to_vis
 
@@ -77,7 +75,7 @@ class Quad(Body):
 
 
 class CornerQuad(Quad):
-    def draw(self, viewer: kb_rendering.KilobotsViewer):
+    def draw(self, viewer):
         super(CornerQuad, self).draw(viewer)
 
         # h = viewer.height
@@ -102,7 +100,7 @@ class Circle(Body):
             restitution=self._restitution
         )
 
-    def draw(self, viewer: kb_rendering.KilobotsViewer):
+    def draw(self, viewer):
         viewer.draw_circle(position=self._body.position, radius=self._radius, color=self._body_color)
 
     def get_radius(self):
@@ -117,7 +115,7 @@ class LetterForm(Body):
         self._height = height
         self._fixture = []
 
-    def draw(self, viewer: kb_rendering.KilobotsViewer):
+    def draw(self, viewer):
         for fixture in self._fixture:
             vertices = [self._body.transform * v for v in fixture.shape.vertices]
             # vertices = [(s * x, h - s * y) for (x, y) in vertices]

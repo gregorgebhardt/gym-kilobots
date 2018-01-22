@@ -82,14 +82,14 @@ class QuadAssemblyKilobotsEnv(KilobotsEnv):
                           ]
 
     # TODO implement has_finished function
-    def _has_finished(self, state, action):
+    def has_finished(self, state, action):
         return False
 
     # TODO implement reward function
-    def _reward(self, state, action, new_state):
+    def get_reward(self, state, action, new_state):
         # compute reward based on task and swarm state
         return 1.
 
     # info function
-    def _get_info(self, state, action):
+    def get_info(self, state, action):
         return None

@@ -3,8 +3,6 @@ import pandas as pd
 
 from gym import spaces
 
-from . import kb_rendering
-
 
 class Light(object):
     def __init__(self):
@@ -20,7 +18,7 @@ class Light(object):
     def get_state(self):
         raise NotImplementedError
 
-    def draw(self, viewer: kb_rendering.KilobotsViewer):
+    def draw(self, viewer):
         raise NotImplementedError
 
     def get_index(self):
@@ -57,7 +55,7 @@ class SinglePositionLight(Light):
     def get_index(self):
         return pd.Index(['x', 'y'])
 
-    def draw(self, viewer: kb_rendering.KilobotsViewer):
+    def draw(self, viewer):
         viewer.draw_aacircle(position=self._position, radius=.01, color=(255, 30, 30, 150))
 
 
@@ -78,7 +76,7 @@ class CircularGradientLight(SinglePositionLight):
     def get_index(self):
         return pd.Index(['x', 'y'])
 
-    def draw(self, viewer: kb_rendering.KilobotsViewer):
+    def draw(self, viewer):
         viewer.draw_aacircle(position=self._position, radius=self._radius, color=(255, 255, 30, 150))
 
 
@@ -98,7 +96,7 @@ class SmoothGridLight(Light):
     def get_index(self):
         raise NotImplementedError
 
-    def draw(self, viewer: kb_rendering.KilobotsViewer):
+    def draw(self, viewer):
         raise NotImplementedError
 
 
@@ -141,6 +139,6 @@ class GradientLight(Light):
     def get_index(self):
         raise NotImplementedError
 
-    def draw(self, viewer: kb_rendering.KilobotsViewer):
+    def draw(self, viewer):
         # viewer.draw_polyline((self._gradient_start, self._gradient_end), color=(1, 0, 0))
         pass

@@ -1,12 +1,9 @@
+import math
+
 import numpy as np
 from Box2D import b2Vec2
-from numpy.ma.core import filled
 
 from .body import Circle
-
-from . import kb_rendering
-
-import math, time
 
 
 class Kilobot(Circle):
@@ -125,7 +122,7 @@ class Kilobot(Circle):
         else:
             self._body.linearVelocity = linear_velocity
 
-    def draw(self, viewer: kb_rendering.KilobotsViewer):
+    def draw(self, viewer):
         super(Kilobot, self).draw(viewer)
         # viewer.draw_circle(position=self._body.position, radius=self._radius, color=(50,) * 3, filled=False)
 

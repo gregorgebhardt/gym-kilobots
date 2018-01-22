@@ -31,17 +31,17 @@ class UniteKilobotsEnv(KilobotsEnv):
         self._kilobots = [SimplePhototaxisKilobot(self.world, position=self._kilobots_spawn_distribution.rvs(),
                                                   light=self._light) for _ in range(self._num_kilobots)]
 
-    def _has_finished(self, state, action):
+    def has_finished(self, state, action):
         positions = state['kilobots'][:, :2]
         if positions.std(axis=0).max() < .05:
             return True
         return False
 
-    def _reward(self, state, action):
+    def get_reward(self, state, action):
         # compute reward based on task and swarm state
         positions = state['kilobots'][:, :2]
         return -1 * positions.std(axis=0).max()
 
     # info function
-    def _get_info(self, state, action):
+    def get_info(self, state, action):
         return None
