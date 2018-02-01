@@ -1,3 +1,5 @@
+import abc
+
 import numpy as np
 import Box2D
 
@@ -46,8 +48,13 @@ class Body:
     def get_state(self):
         return (*self._body.position, self._body.angle)
 
+    @abc.abstractmethod
     def draw(self, viewer):
         raise NotImplementedError('The draw method needs to be implemented by the subclass of Body.')
+
+    @abc.abstractmethod
+    def plot(self, axes, **kwargs):
+        raise NotImplementedError('The plot method needs to be implemented by the subclass of Body.')
 
 
 class Quad(Body):
@@ -73,6 +80,24 @@ class Quad(Body):
 
         viewer.draw_polygon(vertices, filled=True, color=self._body_color)
 
+    def plot(self, axes, **kwargs):
+        from matplotlib.patches import Rectangle
+        defaults = dict(fill=True, edgecolor='#929591', facecolor='#d8dcd6')
+        for k in defaults:
+            if k not in kwargs:
+                kwargs[k] = defaults[k]
+
+        if 'alpha' in kwargs:
+            from matplotlib.colors import to_rgba
+            kwargs['edgecolor'] = to_rgba(kwargs['edgecolor'], kwargs['alpha'])
+            kwargs['facecolor'] = to_rgba(kwargs['facecolor'], kwargs['alpha'])
+
+        x, y, theta = self.get_pose()
+        axes.add_patch(
+            Rectangle(xy=(x-self._width/2, y-self._height/2), angle=theta, width=self._width, height=self._height,
+                      **kwargs)
+        )
+
 
 class CornerQuad(Quad):
     def draw(self, viewer):
@@ -85,6 +110,22 @@ class CornerQuad(Quad):
         # vertices = [(s * x, h - s * y) for (x, y) in vertices]
 
         viewer.draw_polygon(vertices[0:3], filled=True, color=self._highlight_color)
+
+    def plot(self, axes, **kwargs):
+        from matplotlib.patches import Polygon
+        defaults = dict(highlight_fill=True, highlight_facecolor='#d8dcd6')
+        for k in defaults:
+            if k not in kwargs:
+                kwargs[k] = defaults[k]
+
+        if 'alpha' in kwargs:
+            from matplotlib.colors import to_rgba
+            kwargs['highlight_facecolor'] = to_rgba(kwargs['highlight_facecolor'], kwargs['alpha'])
+
+        super(CornerQuad, self).plot(axes, **kwargs)
+        vertices = [self._body.transform * v for v in self._fixture.shape.vertices]
+        axes.add_patch(Polygon(xy=np.array(vertices[0:3]), fill=kwargs['highlight_fill'],
+                               facecolor=kwargs['highlight_facecolor']))
 
 
 class Circle(Body):
@@ -105,6 +146,15 @@ class Circle(Body):
 
     def get_radius(self):
         return self._radius
+
+    def plot(self, axes, **kwargs):
+        from matplotlib.patches import Circle
+        defaults = dict(fill=True)
+        for k in defaults:
+            if k not in kwargs:
+                kwargs[k] = defaults[k]
+
+        axes.add_patch(Circle(xy=self.get_position(), radius=self.get_radius(), **kwargs))
 
 
 class LetterForm(Body):

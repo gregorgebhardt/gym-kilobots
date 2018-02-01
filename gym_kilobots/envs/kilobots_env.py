@@ -68,6 +68,8 @@ class KilobotsEnv(gym.Env):
         self.action_space = None
         self.observation_space = None
 
+        self.__seed = np.random.seed()
+
         self._configure_environment()
 
         if self._light is not None:
@@ -88,8 +90,6 @@ class KilobotsEnv(gym.Env):
                                                self._light.observation_space])
 
         self._screen = None
-
-        self.__seed = None
 
     def _add_kilobot(self, kilobot: Kilobot):
         self._kilobots.append(kilobot)
@@ -134,7 +134,7 @@ class KilobotsEnv(gym.Env):
     def _seed(self, seed=None):
         if seed is not None:
             self.__seed = seed
-        return self.__seed
+        return [self.__seed]
 
     def _reset(self):
         self._destroy()
@@ -240,3 +240,12 @@ class KilobotsEnv(gym.Env):
         light_index = self._light.get_index()
 
         return kilobot_index, objects_index, light_index
+
+    def get_objects(self):
+        return self._objects
+
+    def get_kilobots(self):
+        return self._kilobots
+
+    def get_light(self):
+        return self._light

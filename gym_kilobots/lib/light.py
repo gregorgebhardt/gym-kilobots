@@ -5,8 +5,9 @@ from gym import spaces
 
 
 class Light(object):
+    action_space = None
+
     def __init__(self):
-        self.action_space = None
         self.observation_space = None
         
     def step(self, action):
@@ -26,6 +27,8 @@ class Light(object):
 
 
 class SinglePositionLight(Light):
+    action_space = spaces.Box(np.array([-.01, -.01]), np.array([.01, .01]))
+
     def __init__(self, position: np.ndarray = None, bounds: (np.ndarray, np.ndarray) = None):
         super().__init__()
         if position is None:
@@ -38,7 +41,6 @@ class SinglePositionLight(Light):
         else:
             self._bounds = np.array([-np.inf, -np.inf]), np.array([np.inf, np.inf])
 
-        self.action_space = spaces.Box(np.array([-.01, -.01]), np.array([.01, .01]))
         self.observation_space = spaces.Box(*self._bounds)
 
     def step(self, action: np.ndarray):
