@@ -27,7 +27,7 @@ class Light(object):
 
 
 class SinglePositionLight(Light):
-    action_space = spaces.Box(np.array([-.01, -.01]), np.array([.01, .01]))
+    action_space = spaces.Box(np.array([-.01, -.01]), np.array([.01, .01]), dtype=np.float64)
 
     def __init__(self, position: np.ndarray = None, bounds: (np.ndarray, np.ndarray) = None):
         super().__init__()
@@ -41,7 +41,7 @@ class SinglePositionLight(Light):
         else:
             self._bounds = np.array([-np.inf, -np.inf]), np.array([np.inf, np.inf])
 
-        self.observation_space = spaces.Box(*self._bounds)
+        self.observation_space = spaces.Box(*self._bounds, dtype=np.float64)
 
     def step(self, action: np.ndarray):
         self._position += action

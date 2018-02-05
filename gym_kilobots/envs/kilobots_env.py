@@ -4,7 +4,7 @@ from gym import error, spaces, utils
 
 import sys
 import logging
-gym.undo_logger_setup()
+# gym.undo_logger_setup()
 formatter = logging.Formatter('[%(asctime)s] %(message)s')
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(formatter)
@@ -80,11 +80,11 @@ class KilobotsEnv(gym.Env):
         # construct observation space
         kb_low = np.array([[self.world_x_range[0], self.world_y_range[0], -np.inf]] * len(self._kilobots))
         kb_high = np.array([[self.world_x_range[1], self.world_y_range[1], np.inf]] * len(self._kilobots))
-        kb_observation_space = spaces.Box(low=kb_low, high=kb_high)
+        kb_observation_space = spaces.Box(low=kb_low, high=kb_high, dtype=np.float64)
 
         objects_low = np.array([[self.world_x_range[0], self.world_y_range[0], -np.inf]] * len(self._objects))
         objects_high = np.array([[self.world_x_range[1], self.world_y_range[1], np.inf]] * len(self._objects))
-        objects_observation_space = spaces.Box(low=objects_low, high=objects_high)
+        objects_observation_space = spaces.Box(low=objects_low, high=objects_high, dtype=np.float64)
 
         self.observation_space = spaces.Tuple([kb_observation_space, objects_observation_space,
                                                self._light.observation_space])
@@ -119,7 +119,7 @@ class KilobotsEnv(gym.Env):
     def get_info(self, state, action):
         return ""
 
-    def _destroy(self):
+    def destroy(self):
         del self._objects[:]
         del self._kilobots[:]
         del self._light
@@ -128,22 +128,22 @@ class KilobotsEnv(gym.Env):
             del self._screen
             self._screen = None
 
-    def _close(self):
-        self._destroy()
+    def close(self):
+        self.destroy()
 
-    def _seed(self, seed=None):
+    def seed(self, seed=None):
         if seed is not None:
             self.__seed = seed
         return [self.__seed]
 
-    def _reset(self):
-        self._destroy()
+    def reset(self):
+        self.destroy()
         self._configure_environment()
         self.__sim_steps = 0
 
         return self.get_observation()
 
-    def _step(self, action):
+    def step(self, action):
         if self.action_space:
             assert self.action_space.contains(action), "%r (%s) invalid " % (action, type(action))
 
@@ -191,7 +191,7 @@ class KilobotsEnv(gym.Env):
         self.world.Step(self.sim_step, self.__sim_velocity_iterations, self.__sim_position_iterations)
         self.world.ClearForces()
 
-    def _render(self, mode='human', close=False):
+    def render(self, mode='human'):
         if close:
             if self._screen is not None:
                 self._screen.close()
