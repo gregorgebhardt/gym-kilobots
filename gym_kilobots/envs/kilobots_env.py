@@ -4,11 +4,6 @@ from gym import error, spaces, utils
 
 import sys
 import logging
-# gym.undo_logger_setup()
-formatter = logging.Formatter('[%(asctime)s] %(message)s')
-handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(formatter)
-logging.getLogger().addHandler(handler)
 
 import numpy as np
 import pandas as pd
