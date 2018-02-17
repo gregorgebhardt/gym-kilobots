@@ -48,6 +48,15 @@ class Body:
     def get_state(self):
         return (*self._body.position, self._body.angle)
 
+    def get_local_point(self, point):
+        return (*self._body.GetLocalPoint(point),)
+
+    def get_local_orientation(self, angle):
+        return angle - self._body.angle
+
+    def get_local_pose(self, pose):
+        return (*self.get_local_point(pose[:2]), self.get_local_orientation(pose[2]))
+
     @abc.abstractmethod
     def draw(self, viewer):
         raise NotImplementedError('The draw method needs to be implemented by the subclass of Body.')
