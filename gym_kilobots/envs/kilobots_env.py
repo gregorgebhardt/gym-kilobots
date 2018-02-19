@@ -60,17 +60,9 @@ class KilobotsEnv(gym.Env):
         # add light
         self._light: Light = None
 
-        self.action_space = None
-        self.observation_space = None
-
         self.__seed = np.random.seed()
 
         self._configure_environment()
-
-        if self._light is not None:
-            self.action_space = self._light.action_space
-        else:
-            self.action_space = None
 
         # construct observation space
         kb_low = np.array([[self.world_x_range[0], self.world_y_range[0], -np.inf]] * len(self._kilobots))
