@@ -66,7 +66,33 @@ class Body:
         raise NotImplementedError('The plot method needs to be implemented by the subclass of Body.')
 
 
-class Quad(Body):
+class Polygon(Body):
+    def __init__(self, **kwargs):
+        super().__init__(** kwargs)
+
+        self._fixture = None
+
+    def draw(self, viewer):
+        vertices = [self._body.transform * v for v in self._fixture.shape.vertices]
+        viewer.draw_polygon(vertices, filled=True, color=self._body_color)
+
+    def plot(self, axes, **kwargs):
+        from matplotlib.patches import Polygon
+        defaults = dict(fill=True, edgecolor='#929591', facecolor='#d8dcd6')
+        for k in defaults:
+            if k not in kwargs:
+                kwargs[k] = defaults[k]
+
+        if 'alpha' in kwargs:
+            from matplotlib.colors import to_rgba
+            kwargs['edgecolor'] = to_rgba(kwargs['edgecolor'], kwargs['alpha'])
+            kwargs['facecolor'] = to_rgba(kwargs['facecolor'], kwargs['alpha'])
+
+        vertices = [self._body.transform * v for v in self._fixture.shape.vertices]
+        axes.add_patch(Polygon(xy=np.array(vertices[0:3]), **kwargs))
+
+
+class Quad(Polygon):
     def __init__(self, width, height, **kwargs):
         super().__init__(**kwargs)
 
@@ -79,15 +105,6 @@ class Quad(Body):
             friction=self._friction,
             restitution=self._restitution,
             radius=.001)
-
-    def draw(self, viewer):
-        # h = viewer.height
-        # s = self.scale_sim_to_vis
-
-        vertices = [self._body.transform * v for v in self._fixture.shape.vertices]
-        # vertices = [(s * x, h - s * y) for (x, y) in vertices]
-
-        viewer.draw_polygon(vertices, filled=True, color=self._body_color)
 
     def plot(self, axes, **kwargs):
         from matplotlib.patches import Rectangle
@@ -102,10 +119,8 @@ class Quad(Body):
             kwargs['facecolor'] = to_rgba(kwargs['facecolor'], kwargs['alpha'])
 
         x, y, theta = self.get_pose()
-        axes.add_patch(
-            Rectangle(xy=(x-self._width/2, y-self._height/2), angle=theta, width=self._width, height=self._height,
-                      **kwargs)
-        )
+        axes.add_patch(Rectangle(xy=(x-self._width/2, y-self._height/2), angle=theta,
+                                 width=self._width, height=self._height, **kwargs))
 
 
 class CornerQuad(Quad):
@@ -135,6 +150,24 @@ class CornerQuad(Quad):
         vertices = [self._body.transform * v for v in self._fixture.shape.vertices]
         axes.add_patch(Polygon(xy=np.array(vertices[0:3]), fill=kwargs['highlight_fill'],
                                facecolor=kwargs['highlight_facecolor']))
+
+
+class Triangle(Polygon):
+    def __init__(self, width, height, **kwargs):
+        super().__init__(**kwargs)
+
+        self._width = width
+        self._height = height
+
+        v = np.array([(-0.5, 0.0), (0.0, 1.0), (0.5, 0.0)])
+        v *= [self._width, self._height]
+
+        self._fixture = self._body.CreatePolygonFixture(
+            shape=Box2D.b2PolygonShape(vertices=v.tolist()),
+            density=self._density,
+            friction=self._friction,
+            restitution=self._restitution,
+            radius=.001)
 
 
 class Circle(Body):
