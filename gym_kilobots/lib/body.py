@@ -191,7 +191,7 @@ class Circle(Body):
 
     def plot(self, axes, **kwargs):
         from matplotlib.patches import Circle
-        defaults = dict(fill=True)
+        defaults = dict(fill=True, edgecolor='#929591', facecolor='#d8dcd6')
         for k in defaults:
             if k not in kwargs:
                 kwargs[k] = defaults[k]
@@ -215,11 +215,21 @@ class LetterForm(Body):
             viewer.draw_polygon(vertices, color=self._body_color)
             viewer.draw_aacircle(self._body.position, .01, (0, 255, 127))
 
-            # for a nice anti-aliased object outline
-            # gfxdraw.aapolygon(screen, verts, self.object_color)
-            # gfxdraw.filled_polygon(screen, verts, self.object_color)
-            # gfxdraw.circle(screen, int(self.body.position[0] * s), int(h - self.body.position[1] * s), 10,
-            #                (0, 255, 127, 255))
+    def plot(self, axes, **kwargs):
+        from matplotlib.patches import Polygon
+        defaults = dict(fill=True, edgecolor='#929591', facecolor='#d8dcd6')
+        for k in defaults:
+            if k not in kwargs:
+                kwargs[k] = defaults[k]
+
+        if 'alpha' in kwargs:
+            from matplotlib.colors import to_rgba
+            kwargs['edgecolor'] = to_rgba(kwargs['edgecolor'], kwargs['alpha'])
+            kwargs['facecolor'] = to_rgba(kwargs['facecolor'], kwargs['alpha'])
+
+        for fixture in self._fixture:
+            vertices = [self._body.transform * v for v in fixture.shape.vertices]
+            axes.add_patch(Polygon(xy=np.array(vertices), **kwargs))
 
 
 class LForm(LetterForm):
@@ -227,9 +237,9 @@ class LForm(LetterForm):
         super().__init__(**kwargs)
 
         v1 = np.array([(-0.075, 0), (-0.075, -0.1), (0.125, -0.1), (0.125, 0)])
-        v1 *= [self._width / 2, self._height / 3]
+        v1 *= [self._width / .2, self._height / .3]
         v2 = np.array([(-0.075, 0), (-0.075, 0.2), (0.025, 0.2), (0.025, 0)])
-        v2 *= [self._width / 2, self._height / 3]
+        v2 *= [self._width / .2, self._height / .3]
 
         self._body.CreatePolygonFixture(
             shape=Box2D.b2PolygonShape(vertices=v1.tolist()),
@@ -252,9 +262,9 @@ class TForm(LetterForm):
         super().__init__(**kwargs)
 
         v1 = np.array([(0.15, 0.025), (-0.15, 0.025), (-0.15, -0.075), (0.15, -0.075)])
-        v1 *= [self._width / 3, self._height / 2]
+        v1 *= [self._width / .3, self._height / .2]
         v2 = np.array([(0.05, 0.125), (0.05, 0.025), (-0.05, 0.025), (-0.05, 0.125)])
-        v2 *= [self._width / 3, self._height / 2]
+        v2 *= [self._width / .3, self._height / .2]
 
         self._body.CreatePolygonFixture(
             shape=Box2D.b2PolygonShape(vertices=v1.tolist()),
@@ -277,11 +287,11 @@ class CForm(LetterForm):
         super().__init__(**kwargs)
 
         v1 = np.array([(0.15, 0.01), (-0.15, 0.01), (-0.15, -0.09), (0.15, -0.09)])
-        v1 *= [self._width / 3, self._height / 2]
+        v1 *= [self._width / .3, self._height / .2]
         v2 = np.array([(-0.15, 0.01), (-0.15, 0.11), (-0.08, 0.11), (-0.05, 0.01)])
-        v2 *= [self._width / 3, self._height / 2]
+        v2 *= [self._width / .3, self._height / .2]
         v3 = np.array([(0.15, 0.01), (0.15, 0.11), (0.08, 0.11), (0.05, 0.01)])
-        v3 *= [self._width / 3, self._height / 2]
+        v3 *= [self._width / .3, self._height / .2]
 
         self._body.CreatePolygonFixture(
             shape=Box2D.b2PolygonShape(vertices=v1.tolist()),
