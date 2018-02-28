@@ -66,33 +66,7 @@ class Body:
         raise NotImplementedError('The plot method needs to be implemented by the subclass of Body.')
 
 
-class Polygon(Body):
-    def __init__(self, **kwargs):
-        super().__init__(** kwargs)
-
-        self._fixture = None
-
-    def draw(self, viewer):
-        vertices = [self._body.transform * v for v in self._fixture.shape.vertices]
-        viewer.draw_polygon(vertices, filled=True, color=self._body_color)
-
-    def plot(self, axes, **kwargs):
-        from matplotlib.patches import Polygon
-        defaults = dict(fill=True, edgecolor='#929591', facecolor='#d8dcd6')
-        for k in defaults:
-            if k not in kwargs:
-                kwargs[k] = defaults[k]
-
-        if 'alpha' in kwargs:
-            from matplotlib.colors import to_rgba
-            kwargs['edgecolor'] = to_rgba(kwargs['edgecolor'], kwargs['alpha'])
-            kwargs['facecolor'] = to_rgba(kwargs['facecolor'], kwargs['alpha'])
-
-        vertices = [self._body.transform * v for v in self._fixture.shape.vertices]
-        axes.add_patch(Polygon(xy=np.array(vertices[0:3]), **kwargs))
-
-
-class Quad(Polygon):
+class Quad(Body):
     def __init__(self, width, height, **kwargs):
         super().__init__(**kwargs)
 
@@ -152,24 +126,6 @@ class CornerQuad(Quad):
                                facecolor=kwargs['highlight_facecolor']))
 
 
-class Triangle(Polygon):
-    def __init__(self, width, height, **kwargs):
-        super().__init__(**kwargs)
-
-        self._width = width
-        self._height = height
-
-        v = np.array([(-0.5, 0.0), (0.0, 1.0), (0.5, 0.0)])
-        v *= [self._width, self._height]
-
-        self._fixture = self._body.CreatePolygonFixture(
-            shape=Box2D.b2PolygonShape(vertices=v.tolist()),
-            density=self._density,
-            friction=self._friction,
-            restitution=self._restitution,
-            radius=.001)
-
-
 class Circle(Body):
     def __init__(self, radius, **kwargs):
         super().__init__(**kwargs)
@@ -199,21 +155,50 @@ class Circle(Body):
         axes.add_patch(Circle(xy=self.get_position(), radius=self.get_radius(), **kwargs))
 
 
-class LetterForm(Body):
-    def __init__(self, width, height, **kwargs):
+class Polygon(Body):
+    def __init__(self, width: float, height: float, **kwargs):
         super().__init__(**kwargs)
 
-        self._width = width
-        self._height = height
-        self._fixture = []
+        self.width = width
+        self.height = height
+
+        # TODO: right now this assumes that all subpolygons have the same number of edges
+        # TODO: rewrite such that arbitrary subpolygons can be used here
+        vertices = self._shape_vertices()
+
+        v_size = np.amax(vertices, (0, 1)) - np.amin(vertices, (0, 1))
+        vertices /= v_size
+        vertices *= np.array((width, height))
+
+        # compute centroid
+        d = vertices * np.roll(np.roll(vertices, 1, axis=1), 1, axis=2)
+        d = d[..., 0] - d[..., 1]
+        A = .5 * d.sum(axis=1)
+        centroids = np.sum((vertices + np.roll(vertices, 1, axis=1)) * d[..., None], axis=1) / (6*A[:, None])
+
+        centroid = np.abs(A[None, :]).dot(centroids) / np.abs(A[:, None]).sum()
+        centroid[centroid < 1e-10] = .0
+
+        centered_vertices = vertices - centroid
+
+        for v in centered_vertices:
+            self._body.CreatePolygonFixture(
+                shape=Box2D.b2PolygonShape(vertices=v.tolist()),
+                density=self._density,
+                friction=self._friction,
+                restitution=self._restitution,
+                radius=.001)
+
+        self._fixture = self._body.fixtures
+
+    @staticmethod
+    def _shape_vertices() -> np.ndarray:
+        raise NotImplementedError
 
     def draw(self, viewer):
         for fixture in self._fixture:
             vertices = [self._body.transform * v for v in fixture.shape.vertices]
-            # vertices = [(s * x, h - s * y) for (x, y) in vertices]
-
-            viewer.draw_polygon(vertices, color=self._body_color)
-            viewer.draw_aacircle(self._body.position, .01, (0, 255, 127))
+            viewer.draw_polygon(vertices, filled=True, color=self._body_color)
 
     def plot(self, axes, **kwargs):
         from matplotlib.patches import Polygon
@@ -229,87 +214,34 @@ class LetterForm(Body):
 
         for fixture in self._fixture:
             vertices = [self._body.transform * v for v in fixture.shape.vertices]
-            axes.add_patch(Polygon(xy=np.array(vertices), **kwargs))
+            axes.add_patch(Polygon(xy=np.array(vertices[0:3]), **kwargs))
 
 
-class LForm(LetterForm):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        v1 = np.array([(-0.075, 0), (-0.075, -0.1), (0.125, -0.1), (0.125, 0)])
-        v1 *= [self._width / .2, self._height / .3]
-        v2 = np.array([(-0.075, 0), (-0.075, 0.2), (0.025, 0.2), (0.025, 0)])
-        v2 *= [self._width / .2, self._height / .3]
-
-        self._body.CreatePolygonFixture(
-            shape=Box2D.b2PolygonShape(vertices=v1.tolist()),
-            density=self._density,
-            friction=self._friction,
-            restitution=self._restitution,
-            radius=.001)
-        self._body.CreatePolygonFixture(
-            shape=Box2D.b2PolygonShape(vertices=v2.tolist()),
-            density=self._density,
-            friction=self._friction,
-            restitution=self._restitution,
-            radius=.001)
-
-        self._fixture = self._body.fixtures
+class Triangle(Polygon):
+    @staticmethod
+    def _shape_vertices():
+        return np.array([[(-0.5, 0.0),
+                          (0.0, 0.0),
+                          (0.0, 1.0)]])
 
 
-class TForm(LetterForm):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        v1 = np.array([(0.15, 0.025), (-0.15, 0.025), (-0.15, -0.075), (0.15, -0.075)])
-        v1 *= [self._width / .3, self._height / .2]
-        v2 = np.array([(0.05, 0.125), (0.05, 0.025), (-0.05, 0.025), (-0.05, 0.125)])
-        v2 *= [self._width / .3, self._height / .2]
-
-        self._body.CreatePolygonFixture(
-            shape=Box2D.b2PolygonShape(vertices=v1.tolist()),
-            density=self._density,
-            friction=self._friction,
-            restitution=self._restitution,
-            radius=.001)
-        self._body.CreatePolygonFixture(
-            shape=Box2D.b2PolygonShape(vertices=v2.tolist()),
-            density=self._density,
-            friction=self._friction,
-            restitution=self._restitution,
-            radius=.001)
-
-        self._fixture = self._body.fixtures
+class LForm(Polygon):
+    @staticmethod
+    def _shape_vertices():
+        return np.array([[(-0.075, 0), (-0.075, -0.1), (0.125, -0.1), (0.125, 0)],
+                         [(-0.075, 0), (-0.075, 0.2), (0.025, 0.2), (0.025, 0)]])
 
 
-class CForm(LetterForm):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+class TForm(Polygon):
+    @staticmethod
+    def _shape_vertices():
+        return np.array([[(0.15, 0.025), (-0.15, 0.025), (-0.15, -0.075), (0.15, -0.075)],
+                         [(0.05, 0.125), (0.05, 0.025), (-0.05, 0.025), (-0.05, 0.125)]])
 
-        v1 = np.array([(0.15, 0.01), (-0.15, 0.01), (-0.15, -0.09), (0.15, -0.09)])
-        v1 *= [self._width / .3, self._height / .2]
-        v2 = np.array([(-0.15, 0.01), (-0.15, 0.11), (-0.08, 0.11), (-0.05, 0.01)])
-        v2 *= [self._width / .3, self._height / .2]
-        v3 = np.array([(0.15, 0.01), (0.15, 0.11), (0.08, 0.11), (0.05, 0.01)])
-        v3 *= [self._width / .3, self._height / .2]
 
-        self._body.CreatePolygonFixture(
-            shape=Box2D.b2PolygonShape(vertices=v1.tolist()),
-            density=self._density,
-            friction=self._friction,
-            restitution=self._restitution,
-            radius=.001)
-        self._body.CreatePolygonFixture(
-            shape=Box2D.b2PolygonShape(vertices=v2.tolist()),
-            density=self._density,
-            friction=self._friction,
-            restitution=self._restitution,
-            radius=.001)
-        self._body.CreatePolygonFixture(
-            shape=Box2D.b2PolygonShape(vertices=v3.tolist()),
-            density=self._density,
-            friction=self._friction,
-            restitution=self._restitution,
-            radius=.001)
-
-        self._fixture = self._body.fixtures
+class CForm(Polygon):
+    @staticmethod
+    def _shape_vertices():
+        return np.array([[(0.15, 0.01), (-0.15, 0.01), (-0.15, -0.09), (0.15, -0.09)],
+                         [(-0.15, 0.01), (-0.15, 0.11), (-0.08, 0.11), (-0.05, 0.01)],
+                         [(0.15, 0.01), (0.15, 0.11), (0.08, 0.11), (0.05, 0.01)]])
