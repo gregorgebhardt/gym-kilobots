@@ -202,19 +202,21 @@ class Polygon(Body):
 
     def plot(self, axes, **kwargs):
         from matplotlib.patches import Polygon
-        defaults = dict(fill=True, edgecolor='#929591', facecolor='#d8dcd6')
+        defaults = dict(fill=True,
+                        # edgecolor='#929591',
+                        facecolor='#d8dcd6')
         for k in defaults:
             if k not in kwargs:
                 kwargs[k] = defaults[k]
 
         if 'alpha' in kwargs:
             from matplotlib.colors import to_rgba
-            kwargs['edgecolor'] = to_rgba(kwargs['edgecolor'], kwargs['alpha'])
+            # kwargs['edgecolor'] = to_rgba(kwargs['edgecolor'], kwargs['alpha'])
             kwargs['facecolor'] = to_rgba(kwargs['facecolor'], kwargs['alpha'])
 
         for fixture in self._fixture:
             vertices = [self._body.transform * v for v in fixture.shape.vertices]
-            axes.add_patch(Polygon(xy=np.array(vertices[0:3]), **kwargs))
+            axes.add_patch(Polygon(xy=np.array(vertices), **kwargs))
 
 
 class Triangle(Polygon):
@@ -228,20 +230,20 @@ class Triangle(Polygon):
 class LForm(Polygon):
     @staticmethod
     def _shape_vertices():
-        return np.array([[(-0.075, 0), (-0.075, -0.1), (0.125, -0.1), (0.125, 0)],
-                         [(-0.075, 0), (-0.075, 0.2), (0.025, 0.2), (0.025, 0)]])
+        return np.array([[(-0.05, 0.0), (0.1, 0.0), (0.1, 0.3), (-0.05, 0.3)],
+                         [(0.1, 0.0), (0.1, -0.15), (-0.2, -0.15), (-0.2, 0.0)]])
 
 
 class TForm(Polygon):
     @staticmethod
     def _shape_vertices():
-        return np.array([[(0.15, 0.025), (-0.15, 0.025), (-0.15, -0.075), (0.15, -0.075)],
-                         [(0.05, 0.125), (0.05, 0.025), (-0.05, 0.025), (-0.05, 0.125)]])
+        return np.array([[(0.0, 0.15), (0.1, 0.15), (0.1, -0.15), (0.0, -0.15)],
+                         [(0.0, 0.05), (0.0, -0.05), (-0.2, -0.05), (-0.2, 0.05)]])
 
 
 class CForm(Polygon):
     @staticmethod
     def _shape_vertices():
-        return np.array([[(0.15, 0.01), (-0.15, 0.01), (-0.15, -0.09), (0.15, -0.09)],
-                         [(-0.15, 0.01), (-0.15, 0.11), (-0.08, 0.11), (-0.05, 0.01)],
-                         [(0.15, 0.01), (0.15, 0.11), (0.08, 0.11), (0.05, 0.01)]])
+        return np.array([[(0.09, 0.15), (0.09, -0.15), (-0.01, -0.15), (-0.01, 0.15,)],
+                         [(-0.01, -0.15), (-0.11, -0.15), (-0.11, -0.08), (-0.01, -0.05)],
+                         [(-0.01, 0.15), (-0.11, 0.15), (-0.11, 0.08), (-0.01, 0.05)]])
