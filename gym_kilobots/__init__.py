@@ -9,3 +9,8 @@ register(
     id='Kilobots-QuadAssembly-v0',
     entry_point='gym_kilobots.envs:QuadAssemblyKilobotsEnv'
 )
+
+register(
+    id='Kilobots-GradientLight-v0',
+    entry_point='gym_kilobots.envs:GradientLightEnv'
+)

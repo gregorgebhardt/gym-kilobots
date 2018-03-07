@@ -13,14 +13,14 @@ class KilobotsViewer(object):
         pygame.display.set_caption(caption)
         pygame.event.set_allowed(pygame.QUIT)
 
-        self._scale = np.eye(2)
+        self._scale = np.array([[1., .0], [.0, -1.]])
         self._translation = np.zeros(2)
 
     def set_bounds(self, left, right, bottom, top):
         assert right > left and top > bottom
         scale_x = self._width / (right - left)
         scale_y = self._height / (top - bottom)
-        self._scale = np.array([[scale_x, .0], [.0, scale_y]])
+        self._scale = np.array([[scale_x, .0], [.0, -scale_y]])
         self._translation = np.array([-left * scale_x, -bottom * scale_y])
 
     def _transform(self, position):

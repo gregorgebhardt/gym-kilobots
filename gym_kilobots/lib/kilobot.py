@@ -213,7 +213,7 @@ class PhototaxisKilobot(Kilobot):
         self.__light_measurement = 0
         self.__threshold = -np.inf
         self.__last_update = .0
-        self.__update_interval = 5
+        self.__update_interval = 6
         self.__update_counter = 0
         self.__no_change_counter = 0
         self.__no_change_threshold = 15
@@ -232,7 +232,7 @@ class PhototaxisKilobot(Kilobot):
         self.__light_measurement = self.get_ambientlight()
 
         if self.__light_measurement > self.__threshold or self.__no_change_counter >= self.__no_change_threshold:
-            self.__threshold = self.__light_measurement  #- 3
+            self.__threshold = self.__light_measurement + .01
             self._switch_directions()
             self.__no_change_counter = 0
         else:

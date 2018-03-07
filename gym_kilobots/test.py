@@ -3,8 +3,10 @@ import gym_kilobots
 
 import pandas as pd
 
+import numpy as np
+
 # env = gym.make('Kilobots-Empty-Unite-v0')
-env = gym.make('Kilobots-QuadAssembly-v0')
+env = gym.make('Kilobots-GradientLight-v0')
 env.reset()
 
 # kilobot_index, object_index, light_index = env.get_index()
@@ -16,8 +18,11 @@ env.reset()
 
 for t in range(2000):
     env.render()
-    # state, reward, done, info = env.step(None)
-    state_t, reward_t, done, info = env.step(env.action_space.sample())
+    if t < 500:
+        state, reward, done, info = env.step(np.array([-.25 * np.pi]))
+    else:
+        state, reward, done, info = env.step(np.array([.75 * np.pi]))
+    # state_t, reward_t, done, info = env.step(env.action_space.sample())
 
     # df_kilobots_t = pd.DataFrame(data=state_t['kilobots'].reshape((1, -1)), columns=kilobot_index, index=[t])
     # df_objects_t = pd.DataFrame(data=state_t['objects'].reshape((1, -1)), columns=object_index, index=[t])

@@ -40,6 +40,8 @@ class SinglePositionLight(Light):
         self.observation_space = spaces.Box(*self._bounds, dtype=np.float64)
 
     def step(self, action: np.ndarray):
+        if action is None:
+            return
         self._position += action
         self._position = np.maximum(self._position, self._bounds[0])
         self._position = np.minimum(self._position, self._bounds[1])
@@ -99,44 +101,40 @@ class SmoothGridLight(Light):
 
 
 class GradientLight(Light):
-    # TODO change to angular representation and add angular displacement as action
-    def __init__(self, gradient_start: np.ndarray = None, gradient_end: np.ndarray = None,
-                 gradient_min: int = 0, gradient_max: int = 1024):
+    def __init__(self, center: np.ndarray = None, angle: float = .0):
         super().__init__()
 
-        self._gradient_start = gradient_start
-        if self._gradient_start is None:
-            self._gradient_start = np.array([0, 0])
+        self._gradient_center = center
+        if self._gradient_center is None:
+            self._gradient_center = np.array([0, 0])
 
-        self._gradient_end = gradient_end
-        if self._gradient_end is None:
-            self._gradient_end = np.array([0, 1])
+        self._gradient_angle = angle
+        self._gradient_vec = np.r_[np.cos(angle), np.sin(angle)]
 
-        self._gradient_vec = self._gradient_end - self._gradient_start
-        assert gradient_max > gradient_min
-        self._gradient_min = gradient_min
-        self._gradient_max = gradient_max
-        self._gradient_range = gradient_max - gradient_min
+        self._bounds = np.array([-np.pi]), np.array([np.pi])
+
+        self.observation_space = spaces.Box(*self._bounds, dtype=np.float64)
+        self.action_space = spaces.Box(*self._bounds, dtype=np.float64)
 
     def step(self, action):
-        pass
+        if action is None:
+            return
+        self._gradient_angle = action
+        # self._gradient_angle = np.maximum(self._gradient_angle, self._bounds[0])
+        # self._gradient_angle = np.minimum(self._gradient_angle, self._bounds[1])
+        self._gradient_vec = np.r_[np.cos(action), np.sin(action)]
 
     def get_value(self, position: np.ndarray):
-        query_point = position - self._gradient_start.astype(float)
+        query_point = position - self._gradient_center.astype(float)
         projection = self._gradient_vec.dot(query_point)
-        projection /= np.linalg.norm(self._gradient_vec)**2
-
-        if projection < 0:
-            return self._gradient_min
-
-        return min(projection * self._gradient_range + self._gradient_min, self._gradient_max)
+        return projection
 
     def get_state(self):
-        return None
+        return self._gradient_vec
 
     def get_index(self):
-        raise NotImplementedError
+        return pd.Index(['theta'])
 
     def draw(self, viewer):
-        # viewer.draw_polyline((self._gradient_start, self._gradient_end), color=(1, 0, 0))
+        viewer.draw_polyline((self._gradient_center, self._gradient_center + self._gradient_vec), color=(1, 0, 0))
         pass

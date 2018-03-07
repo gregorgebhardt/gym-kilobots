@@ -131,18 +131,19 @@ class KilobotsEnv(gym.Env):
         return self.get_observation()
 
     def step(self, action):
-        if self.action_space:
-            assert self.action_space.contains(action), "%r (%s) invalid " % (action, type(action))
+        # if self.action_space and action is not None:
+        #     assert self.action_space.contains(action), "%r (%s) invalid " % (action, type(action))
 
         # state before action is applied
         old_state = self.get_state()
 
         for i in range(self.__steps_per_action):
             # step light
-            if i == 0:
-                self._light.step(action)
-            else:
-                self._light.step(np.zeros(2))
+            if action is not None:
+                if i == 0:
+                    self._light.step(action)
+                else:
+                    self._light.step(None)
 
             # step kilobots
             for k in self._kilobots:
@@ -179,11 +180,11 @@ class KilobotsEnv(gym.Env):
         self.world.ClearForces()
 
     def render(self, mode='human'):
-        if close:
-            if self._screen is not None:
-                self._screen.close()
-                self._screen = None
-            return
+        # if close:
+        #     if self._screen is not None:
+        #         self._screen.close()
+        #         self._screen = None
+        #     return
 
         if self.__sim_steps % self.__sim_steps_per_second // self.__viz_steps_per_second:
             return
