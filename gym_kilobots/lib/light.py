@@ -25,23 +25,28 @@ class Light(object):
 
 
 class SinglePositionLight(Light):
-    def __init__(self, position: np.ndarray = None, bounds: (np.ndarray, np.ndarray) = None):
+    def __init__(self, position: np.ndarray = None, bounds: (np.ndarray, np.ndarray) = None,
+                 action_bounds: (np.ndarray, np.ndarray) = None):
         super().__init__()
         if position is None:
             self._position = np.array((.0, .0))
         else:
             self._position = position
 
-        if bounds is not None:
-            self._bounds = bounds
-        else:
+        self._bounds = bounds
+        if self._bounds is None:
             self._bounds = np.array([-np.inf, -np.inf]), np.array([np.inf, np.inf])
+
+        self._action_bounds = action_bounds
 
         self.observation_space = spaces.Box(*self._bounds, dtype=np.float64)
 
     def step(self, action: np.ndarray):
         if action is None:
             return
+        if self._action_bounds:
+            action = np.maximum(action, self._action_bounds[0])
+            action = np.minimum(action, self._action_bounds[1])
         self._position += action
         self._position = np.maximum(self._position, self._bounds[0])
         self._position = np.minimum(self._position, self._bounds[1])
@@ -60,8 +65,8 @@ class SinglePositionLight(Light):
 
 
 class CircularGradientLight(SinglePositionLight):
-    def __init__(self, position: np.ndarray = None, bounds: (np.ndarray, np.ndarray) = None, radius=.2):
-        super().__init__(position, bounds)
+    def __init__(self, radius=.2, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._radius = radius
 
     def get_value(self, position: np.ndarray):
