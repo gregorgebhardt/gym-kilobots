@@ -1,5 +1,6 @@
 import numpy as np
-import pandas as pd
+
+from typing import Iterable, Callable
 
 from gym import spaces
 
@@ -7,20 +8,18 @@ from gym import spaces
 class Light(object):
     def __init__(self):
         self.observation_space = None
+        self.action_space = None
         
     def step(self, action):
         raise NotImplementedError
 
-    def get_value(self, position: np.ndarray):
+    def get_value(self, position: np.ndarray) -> float:
         raise NotImplementedError
 
     def get_state(self):
         raise NotImplementedError
 
     def draw(self, viewer):
-        raise NotImplementedError
-
-    def get_index(self):
         raise NotImplementedError
 
 
@@ -38,7 +37,10 @@ class SinglePositionLight(Light):
             self._bounds = np.array([-np.inf, -np.inf]), np.array([np.inf, np.inf])
 
         self._action_bounds = action_bounds
+        if self._action_bounds is None:
+            self._action_bounds = np.array([-np.inf, -np.inf]), np.array([np.inf, np.inf])
 
+        self.action_space = spaces.Box(*self._action_bounds, dtype=np.float64)
         self.observation_space = spaces.Box(*self._bounds, dtype=np.float64)
 
     def step(self, action: np.ndarray):
@@ -57,11 +59,37 @@ class SinglePositionLight(Light):
     def get_state(self):
         return self._position
 
-    def get_index(self):
-        return pd.Index(['x', 'y'])
-
     def draw(self, viewer):
         viewer.draw_aacircle(position=self._position, radius=.01, color=(255, 30, 30, 150))
+
+
+class CompositionLight(Light):
+    def __init__(self, lights: Iterable[Light] = None, reducer: Callable[[Iterable[float]], float] = sum):
+        super().__init__()
+        self._lights = lights
+        self._reducer = reducer
+
+        self.observation_space = spaces.Tuple(l.observation_space for l in self._lights)
+        self.action_space = spaces.Box(np.concatenate(list(l.action_space.low for l in self._lights)),
+                                       np.concatenate(list(l.action_space.high for l in self._lights)),
+                                       dtype=np.float64)
+        self._action_dims = list(l.action_space.shape[0] for l in self._lights)
+
+    def step(self, action):
+        if action is not None:
+            for l, ad in zip(self._lights, self._action_dims):
+                l.step(action[:ad])
+                action = action[ad:]
+
+    def get_value(self, position: np.ndarray) -> float:
+        return self._reducer(l.get_value(position) for l in self._lights)
+
+    def get_state(self):
+        return np.concatenate(list(l.get_state() for l in self._lights))
+
+    def draw(self, viewer):
+        for l in self._lights:
+            l.draw(viewer)
 
 
 class CircularGradientLight(SinglePositionLight):
@@ -77,9 +105,6 @@ class CircularGradientLight(SinglePositionLight):
 
     def get_state(self):
         return self._position
-
-    def get_index(self):
-        return pd.Index(['x', 'y'])
 
     def draw(self, viewer):
         viewer.draw_aacircle(position=self._position, radius=self._radius, color=(255, 255, 30, 150))
@@ -98,9 +123,6 @@ class SmoothGridLight(Light):
     def get_state(self):
         raise NotImplementedError
 
-    def get_index(self):
-        raise NotImplementedError
-
     def draw(self, viewer):
         raise NotImplementedError
 
@@ -113,20 +135,24 @@ class GradientLight(Light):
         if self._gradient_center is None:
             self._gradient_center = np.array([0, 0])
 
-        self._gradient_angle = angle
+
+        self._gradient_angle = np.array([angle])
         self._gradient_vec = np.r_[np.cos(angle), np.sin(angle)]
 
         self._bounds = np.array([-np.pi]), np.array([np.pi])
+        self._action_bounds = np.array([-np.pi]), np.array([np.pi])
 
         self.observation_space = spaces.Box(*self._bounds, dtype=np.float64)
-        self.action_space = spaces.Box(*self._bounds, dtype=np.float64)
+        self.action_space = spaces.Box(*self._action_bounds, dtype=np.float64)
 
     def step(self, action):
         if action is None:
             return
+        if action < self._action_bounds[0]:
+            action += 2 * np.pi
+        if action > self._action_bounds[1]:
+            action -= 2 * np.pi
         self._gradient_angle = action
-        # self._gradient_angle = np.maximum(self._gradient_angle, self._bounds[0])
-        # self._gradient_angle = np.minimum(self._gradient_angle, self._bounds[1])
         self._gradient_vec = np.r_[np.cos(action), np.sin(action)]
 
     def get_value(self, position: np.ndarray):
@@ -135,10 +161,7 @@ class GradientLight(Light):
         return projection
 
     def get_state(self):
-        return self._gradient_vec
-
-    def get_index(self):
-        return pd.Index(['theta'])
+        return self._gradient_angle
 
     def draw(self, viewer):
         viewer.draw_polyline((self._gradient_center, self._gradient_center + self._gradient_vec), color=(1, 0, 0))
