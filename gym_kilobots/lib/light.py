@@ -1,6 +1,6 @@
 import numpy as np
 
-from typing import Iterable, Callable
+from typing import Iterable, Callable, Optional
 
 from gym import spaces
 
@@ -14,6 +14,9 @@ class Light(object):
         raise NotImplementedError
 
     def get_value(self, position: np.ndarray) -> float:
+        raise NotImplementedError
+
+    def get_gradient(self, position: np.ndarray) -> np.ndarray:
         raise NotImplementedError
 
     def get_state(self):
@@ -56,6 +59,10 @@ class SinglePositionLight(Light):
     def get_value(self, position: np.ndarray):
         return -np.linalg.norm(self._position - position)
 
+    def get_gradient(self, position: np.ndarray):
+        gradient = self._position - position
+        return gradient / np.linalg.norm(gradient)
+
     def get_state(self):
         return self._position
 
@@ -63,8 +70,13 @@ class SinglePositionLight(Light):
         viewer.draw_aacircle(position=self._position, radius=.01, color=(255, 30, 30, 150))
 
 
-class CompositionLight(Light):
-    def __init__(self, lights: Iterable[Light] = None, reducer: Callable[[Iterable[float]], float] = sum):
+class CompositeLight(Light):
+    def __init__(self, lights: Iterable[Light] = None, reducer: Callable[[np.ndarray, Optional[int]], float] = np.sum):
+        """
+
+        :type lights: Iterable[Light] a list of Light objects
+        :type reducer: Callable[[np.ndarray, Optional[int]], float]
+        """
         super().__init__()
         self._lights = lights
         self._reducer = reducer
@@ -82,7 +94,12 @@ class CompositionLight(Light):
                 action = action[ad:]
 
     def get_value(self, position: np.ndarray) -> float:
-        return self._reducer(l.get_value(position) for l in self._lights)
+        return self._reducer(np.array([l.get_value(position) for l in self._lights]))
+
+    def get_gradient(self, position: np.ndarray):
+        max_l = np.argmax([l.get_value(position) for l in self._lights])
+        return self._lights[max_l].get_gradient(position)
+        # return self._reducer(np.array([l.get_gradient(position) for l in self._lights]), 0)
 
     def get_state(self):
         return np.concatenate(list(l.get_state() for l in self._lights))
@@ -103,6 +120,15 @@ class CircularGradientLight(SinglePositionLight):
             return 0
         return 255 * np.minimum(1 - distance / self._radius, 1.)
 
+    def get_gradient(self, position: np.ndarray):
+        gradient = self._position - position
+        norm_gradient = np.linalg.norm(gradient)
+        if norm_gradient < self._radius:
+            gradient /= norm_gradient
+        else:
+            gradient = np.zeros(2)
+        return gradient
+
     def get_state(self):
         return self._position
 
@@ -120,6 +146,9 @@ class SmoothGridLight(Light):
     def get_value(self, position: np.ndarray):
         raise NotImplementedError
 
+    def get_gradient(self, position: np.ndarray):
+        raise NotImplementedError
+
     def get_state(self):
         raise NotImplementedError
 
@@ -134,7 +163,6 @@ class GradientLight(Light):
         self._gradient_center = center
         if self._gradient_center is None:
             self._gradient_center = np.array([0, 0])
-
 
         self._gradient_angle = np.array([angle])
         self._gradient_vec = np.r_[np.cos(angle), np.sin(angle)]
@@ -159,6 +187,9 @@ class GradientLight(Light):
         query_point = position - self._gradient_center.astype(float)
         projection = self._gradient_vec.dot(query_point)
         return projection
+
+    def get_gradient(self, position: np.ndarray):
+        return self._gradient_vec
 
     def get_state(self):
         return self._gradient_angle

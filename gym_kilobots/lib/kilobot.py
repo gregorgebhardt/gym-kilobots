@@ -56,27 +56,27 @@ class Kilobot(Circle):
         else:
             return 0
 
-    def _set_motors(self, left, right):
+    def set_motors(self, left, right):
         self._motor_left = left
         self._motor_right = right
 
-    def _switch_directions(self):
+    def switch_directions(self):
         if self.__turn_direction == 'left':
-            self._turn_right()
+            self.turn_right()
         else:
-            self._turn_left()
+            self.turn_left()
 
-    def _turn_right(self):
+    def turn_right(self):
         self.__turn_direction = 'right'
-        self._set_motors(0, 255)
-        self._set_color((255, 0, 0))
+        self.set_motors(0, 255)
+        self.set_color((255, 0, 0))
 
-    def _turn_left(self):
+    def turn_left(self):
         self.__turn_direction = 'left'
-        self._set_motors(255, 0)
-        self._set_color((0, 255, 0))
+        self.set_motors(255, 0)
+        self.set_color((0, 255, 0))
 
-    def _set_color(self, color):
+    def set_color(self, color):
         self._highlight_color = color
 
     def step(self, time_step):
@@ -172,7 +172,7 @@ class SimplePhototaxisKilobot(Kilobot):
         self.env = world
 
     def _setup(self):
-        self._turn_left()
+        self.turn_left()
 
     def _loop(self):
         pos_real = np.array(self._body.GetWorldPoint((0.0, -self._radius)))
@@ -185,7 +185,7 @@ class SimplePhototaxisKilobot(Kilobot):
         if dist > 0.01:
             if current_light > self.last_light:
                 self.counter = 0
-                self._switch_directions()
+                self.switch_directions()
             else:
                 self.counter = self.counter + 1
 
@@ -195,7 +195,7 @@ class SimplePhototaxisKilobot(Kilobot):
             # self._set_motors(0, 0)
 
     def step(self, time_step):
-        movement_direction = self._light.get_state() - self._body.position
+        movement_direction = self._light.get_gradient(self._body.position)
 
         n = np.sqrt(np.dot(movement_direction, movement_direction))
         # n = np.linalg.norm(movement_direction)
@@ -203,6 +203,7 @@ class SimplePhototaxisKilobot(Kilobot):
             movement_direction = movement_direction / n * 0.01
 
         self._body.linearVelocity = b2Vec2(*movement_direction.astype(float))
+        self._body.angle = np.arctan2(movement_direction[1], movement_direction[0])[0]
         self._body.linearDamping = .0
 
 
@@ -219,7 +220,7 @@ class PhototaxisKilobot(Kilobot):
         self.__no_change_threshold = 15
 
     def _setup(self):
-        self._turn_left()
+        self.turn_left()
 
     def _loop(self):
 
@@ -233,7 +234,7 @@ class PhototaxisKilobot(Kilobot):
 
         if self.__light_measurement > self.__threshold or self.__no_change_counter >= self.__no_change_threshold:
             self.__threshold = self.__light_measurement + .01
-            self._switch_directions()
+            self.switch_directions()
             self.__no_change_counter = 0
         else:
             self.__no_change_counter += 1
