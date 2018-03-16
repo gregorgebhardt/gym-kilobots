@@ -203,7 +203,7 @@ class SimplePhototaxisKilobot(Kilobot):
             movement_direction = movement_direction / n * 0.01
 
         self._body.linearVelocity = b2Vec2(*movement_direction.astype(float))
-        self._body.angle = np.arctan2(movement_direction[1], movement_direction[0])[0]
+        # self._body.angle = np.arctan2(movement_direction[1], movement_direction[0])
         self._body.linearDamping = .0
 
 

@@ -80,6 +80,10 @@ class Quad(Body):
             restitution=self._restitution,
             radius=.001)
 
+    def draw(self, viewer):
+        vertices = [self._body.transform * v for v in self._fixture.shape.vertices]
+        viewer.draw_polygon(vertices, filled=True, color=self._body_color)
+
     def plot(self, axes, **kwargs):
         from matplotlib.patches import Rectangle
         defaults = dict(fill=True, edgecolor='#929591', facecolor='#d8dcd6')
@@ -101,11 +105,7 @@ class CornerQuad(Quad):
     def draw(self, viewer):
         super(CornerQuad, self).draw(viewer)
 
-        # h = viewer.height
-        # s = self.scale_sim_to_vis
-
         vertices = [self._body.transform * v for v in self._fixture.shape.vertices]
-        # vertices = [(s * x, h - s * y) for (x, y) in vertices]
 
         viewer.draw_polygon(vertices[0:3], filled=True, color=self._highlight_color)
 

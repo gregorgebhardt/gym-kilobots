@@ -41,7 +41,7 @@ class SinglePositionLight(Light):
 
         self._action_bounds = action_bounds
         if self._action_bounds is None:
-            self._action_bounds = np.array([-np.inf, -np.inf]), np.array([np.inf, np.inf])
+            self._action_bounds = np.array([-0.01, -0.01]), np.array([.01, .01])
 
         self.action_space = spaces.Box(*self._action_bounds, dtype=np.float64)
         self.observation_space = spaces.Box(*self._bounds, dtype=np.float64)
