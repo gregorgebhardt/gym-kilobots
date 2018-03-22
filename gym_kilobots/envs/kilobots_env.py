@@ -32,6 +32,9 @@ class KilobotsEnv(gym.Env):
     __viz_steps_per_second = 20
     __steps_per_action = 10
 
+    # in addition to action space and observation space, we also define the state space
+    state_space = None
+
     def __new__(cls, *args, **kwargs):
         cls.sim_steps_per_second = cls.__sim_steps_per_second
         cls.sim_step = 1. / cls.__sim_steps_per_second
@@ -62,21 +65,9 @@ class KilobotsEnv(gym.Env):
 
         self.__seed = np.random.seed()
 
-        self._configure_environment()
-
-        # construct observation space
-        kb_low = np.array([[self.world_x_range[0], self.world_y_range[0], -np.inf]] * len(self._kilobots))
-        kb_high = np.array([[self.world_x_range[1], self.world_y_range[1], np.inf]] * len(self._kilobots))
-        kb_observation_space = spaces.Box(low=kb_low, high=kb_high, dtype=np.float64)
-
-        objects_low = np.array([[self.world_x_range[0], self.world_y_range[0], -np.inf]] * len(self._objects))
-        objects_high = np.array([[self.world_x_range[1], self.world_y_range[1], np.inf]] * len(self._objects))
-        objects_observation_space = spaces.Box(low=objects_low, high=objects_high, dtype=np.float64)
-
-        self.observation_space = spaces.Tuple([kb_observation_space, objects_observation_space,
-                                               self._light.observation_space])
-
         self._screen = None
+
+        self._configure_environment()
 
     def _add_kilobot(self, kilobot: Kilobot):
         self._kilobots.append(kilobot)
