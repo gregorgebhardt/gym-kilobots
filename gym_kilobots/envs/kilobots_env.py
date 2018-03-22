@@ -43,7 +43,7 @@ class KilobotsEnv(gym.Env):
         cls.world_bounds = (np.array([-cls.world_width / 2, -cls.world_height / 2]),
                             np.array([cls.world_width / 2, cls.world_height / 2]))
 
-        return super(KilobotsEnv, cls).__new__(cls, *args, **kwargs)
+        return super(KilobotsEnv, cls).__new__(cls)
 
     def __init__(self):
         # create the Kilobots world in Box2D
