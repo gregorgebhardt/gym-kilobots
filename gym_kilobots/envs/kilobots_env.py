@@ -63,7 +63,7 @@ class KilobotsEnv(gym.Env):
         # add light
         self._light: Light = None
 
-        self.__seed = .0
+        self.__seed = 0
 
         self._screen = None
 
