@@ -1,4 +1,5 @@
 import abc
+import math
 
 import numpy as np
 import Box2D
@@ -10,7 +11,7 @@ class Body:
     _restitution = 0.0
 
     _linear_damping = 8
-    _angular_damping = 8
+    _angular_damping = 4
 
     def __init__(self, world: Box2D.b2World, position=None, orientation=None):
         if self.__class__ == Body:
@@ -25,7 +26,7 @@ class Body:
             orientation = .0
 
         self._world = world
-        self._body = world.CreateDynamicBody(
+        self._body: Box2D.b2Body = world.CreateDynamicBody(
             position=Box2D.b2Vec2(*position),
             angle=orientation,
             linearDamping=self._linear_damping,
@@ -37,25 +38,28 @@ class Body:
         self._world.DestroyBody(self._body)
 
     def get_position(self):
-        return (*self._body.position,)
+        return tuple(self._body.position)
 
     def get_orientation(self):
         return self._body.angle
 
     def get_pose(self):
-        return (*self._body.position, self._body.angle)
+        return tuple((*self._body.position, self._body.angle))
 
     def get_state(self):
-        return (*self._body.position, self._body.angle)
+        return tuple((*self._body.position, self._body.angle))
 
     def get_local_point(self, point):
-        return (*self._body.GetLocalPoint(point),)
+        return tuple(self._body.GetLocalPoint(point))
 
     def get_local_orientation(self, angle):
         return angle - self._body.angle
 
     def get_local_pose(self, pose):
-        return (*self.get_local_point(pose[:2]), self.get_local_orientation(pose[2]))
+        return tuple((*self.get_local_point(pose[:2]), self.get_local_orientation(pose[2])))
+
+    def get_world_point(self, point):
+        return tuple(self._body.GetWorldPoint(point))
 
     @abc.abstractmethod
     def draw(self, viewer):
@@ -97,7 +101,8 @@ class Quad(Body):
             kwargs['facecolor'] = to_rgba(kwargs['facecolor'], kwargs['alpha'])
 
         x, y, theta = self.get_pose()
-        axes.add_patch(Rectangle(xy=(x-self._width/2, y-self._height/2), angle=theta,
+        corner = self.get_world_point((-self._width / 2, -self._height / 2))
+        axes.add_patch(Rectangle(xy=corner, angle=math.degrees(theta),
                                  width=self._width, height=self._height, **kwargs))
 
 
