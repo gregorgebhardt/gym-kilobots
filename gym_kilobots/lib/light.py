@@ -167,8 +167,9 @@ class GradientLight(Light):
         self._gradient_angle = np.array([angle])
         self._gradient_vec = np.r_[np.cos(angle), np.sin(angle)]
 
+        # self._bounds = np.array([-np.pi]), np.array([np.pi])
         self._bounds = np.array([-np.pi]), np.array([np.pi])
-        self._action_bounds = np.array([-np.pi]), np.array([np.pi])
+        self._action_bounds = np.array([-np.pi]) / 90, np.array([np.pi]) / 90
 
         self.observation_space = spaces.Box(*self._bounds, dtype=np.float64)
         self.action_space = spaces.Box(*self._action_bounds, dtype=np.float64)
@@ -176,12 +177,21 @@ class GradientLight(Light):
     def step(self, action):
         if action is None:
             return
-        if action < self._action_bounds[0]:
-            action += 2 * np.pi
-        if action > self._action_bounds[1]:
-            action -= 2 * np.pi
-        self._gradient_angle = action
-        self._gradient_vec = np.r_[np.cos(action), np.sin(action)]
+        # if action < self._action_bounds[0]:
+        #     action += 2 * np.pi
+        # if action > self._action_bounds[1]:
+        #     action -= 2 * np.pi
+        # self._gradient_angle = action
+
+        action = np.maximum(action, self._action_bounds[0])
+        action = np.minimum(action, self._action_bounds[1])
+        self._gradient_angle += action
+        if self._gradient_angle < self._bounds[0]:
+            self._gradient_angle += 2 * np.pi
+        if self._gradient_angle > self._bounds[1]:
+            self._gradient_angle -= 2 * np.pi
+
+        self._gradient_vec = np.r_[np.cos(self._gradient_angle), np.sin(self._gradient_angle)]
 
     def get_value(self, position: np.ndarray):
         query_point = position - self._gradient_center.astype(float)
