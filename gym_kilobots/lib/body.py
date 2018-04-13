@@ -10,8 +10,8 @@ class Body:
     _friction = 0.01
     _restitution = 0.0
 
-    _linear_damping = 2
-    _angular_damping = 3
+    _linear_damping = .8
+    _angular_damping = .8
 
     def __init__(self, world: Box2D.b2World, position=None, orientation=None):
         if self.__class__ == Body:

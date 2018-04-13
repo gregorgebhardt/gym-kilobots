@@ -21,10 +21,10 @@ class Kilobot(Circle):
     # _impulse_left_point_body = (_leg_front + _leg_left) / 2
 
     _max_linear_velocity = 0.01  # meters / s
-    _max_angular_velocity = 0.2 * math.pi  # radians / s
+    _max_angular_velocity = 0.1 * math.pi  # radians / s
 
     _density = 1.0
-    _friction = 0.2
+    _friction = 0.0
     _restitution = 0.0
 
     _linear_damping = .8
@@ -199,8 +199,8 @@ class SimplePhototaxisKilobot(Kilobot):
 
         n = np.sqrt(np.dot(movement_direction, movement_direction))
         # n = np.linalg.norm(movement_direction)
-        if n > 0.01:
-            movement_direction = movement_direction / n * 0.01
+        if n > self._max_linear_velocity:
+            movement_direction = movement_direction / n * self._max_linear_velocity
 
         self._body.linearVelocity = b2Vec2(*movement_direction.astype(float))
         # self._body.angle = np.arctan2(movement_direction[1], movement_direction[0])
