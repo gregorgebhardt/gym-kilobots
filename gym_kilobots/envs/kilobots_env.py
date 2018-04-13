@@ -120,7 +120,7 @@ class KilobotsEnv(gym.Env):
 
         return self.get_observation()
 
-    def step(self, action):
+    def step(self, action: np.ndarray):
         # if self.action_space and action is not None:
         #     assert self.action_space.contains(action), "%r (%s) invalid " % (action, type(action))
 
@@ -130,10 +130,18 @@ class KilobotsEnv(gym.Env):
         for i in range(self.__steps_per_action):
             # step light
             if action is not None:
-                if i == 0:
-                    self._light.step(action)
+                if self._light.interpolate_actions:
+                    if self._light.relative_actions:
+                        self._light.step(action / self.__steps_per_action)
+                    else:
+                        light_state = self._light.get_state()
+                        rel_sub_action = action - light_state * i / self.__steps_per_action
+                        self._light.step(light_state + rel_sub_action)
                 else:
-                    self._light.step(None)
+                    if i == 0:
+                        self._light.step(action)
+                    else:
+                        self._light.step(None)
 
             # step kilobots
             for k in self._kilobots:

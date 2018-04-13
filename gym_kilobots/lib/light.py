@@ -6,6 +6,9 @@ from gym import spaces
 
 
 class Light(object):
+    relative_actions = True
+    interpolate_actions = True
+
     def __init__(self):
         self.observation_space = None
         self.action_space = None
