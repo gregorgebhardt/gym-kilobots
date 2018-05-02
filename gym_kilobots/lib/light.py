@@ -160,6 +160,8 @@ class SmoothGridLight(Light):
 
 
 class GradientLight(Light):
+    relative_actions = False
+
     def __init__(self, center: np.ndarray = None, angle: float = .0):
         super().__init__()
 
@@ -172,7 +174,8 @@ class GradientLight(Light):
 
         # self._bounds = np.array([-np.pi]), np.array([np.pi])
         self._bounds = np.array([-np.pi]), np.array([np.pi])
-        self._action_bounds = np.array([-np.pi]) / 90, np.array([np.pi]) / 90
+        # self._action_bounds = np.array([-np.pi]) / 90, np.array([np.pi]) / 90
+        self._action_bounds = 2 * np.array([-np.pi]), 2 * np.array([np.pi])
 
         self.observation_space = spaces.Box(*self._bounds, dtype=np.float64)
         self.action_space = spaces.Box(*self._action_bounds, dtype=np.float64)
@@ -188,7 +191,7 @@ class GradientLight(Light):
 
         action = np.maximum(action, self._action_bounds[0])
         action = np.minimum(action, self._action_bounds[1])
-        self._gradient_angle += action
+        self._gradient_angle = action
         if self._gradient_angle < self._bounds[0]:
             self._gradient_angle += 2 * np.pi
         if self._gradient_angle > self._bounds[1]:

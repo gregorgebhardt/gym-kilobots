@@ -135,7 +135,7 @@ class KilobotsEnv(gym.Env):
                         self._light.step(action / self.__steps_per_action)
                     else:
                         light_state = self._light.get_state()
-                        rel_sub_action = action - light_state * i / self.__steps_per_action
+                        rel_sub_action = (action - light_state) * i / self.__steps_per_action
                         self._light.step(light_state + rel_sub_action)
                 else:
                     if i == 0:
