@@ -62,6 +62,10 @@ class KilobotsViewer(object):
         image_data = pygame.surfarray.array3d(self._window)
         return image_data
 
+    def get_mouse_position(self):
+        mouse_pos = np.array(pygame.mouse.get_pos()) - self._translation
+        return np.linalg.inv(self._scale).dot(mouse_pos)
+
     @staticmethod
     def render():
         pygame.display.flip()

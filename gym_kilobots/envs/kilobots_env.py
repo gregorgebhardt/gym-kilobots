@@ -27,7 +27,6 @@ class KilobotsEnv(gym.Env):
     __sim_steps_per_second = 10
     __sim_velocity_iterations = 10
     __sim_position_iterations = 10
-    __sim_steps = 0
     __viz_steps_per_second = 20
     __steps_per_action = 10
 
@@ -45,15 +44,17 @@ class KilobotsEnv(gym.Env):
         return super(KilobotsEnv, cls).__new__(cls)
 
     def __init__(self):
+        self.__sim_steps = 0
+
         # create the Kilobots world in Box2D
         self.world = b2World(gravity=(0, 0), doSleep=True)
-        table = self.world.CreateStaticBody(position=(.0, .0))
-        table.CreateFixture(
+        self.table = self.world.CreateStaticBody(position=(.0, .0))
+        self.table.CreateFixture(
             shape=b2ChainShape(vertices=[(self.world_x_range[0], self.world_y_range[1]),
                                          (self.world_x_range[0], self.world_y_range[0]),
                                          (self.world_x_range[1], self.world_y_range[0]),
                                          (self.world_x_range[1], self.world_y_range[1])]))
-        table.fixtures[0].shape.radius = .001
+        self.table.fixtures[0].shape.radius = .0001
 
         # add kilobots
         self._kilobots: [Kilobot] = []
@@ -67,6 +68,10 @@ class KilobotsEnv(gym.Env):
         self._screen = None
 
         self._configure_environment()
+
+    @property
+    def _sim_steps(self):
+        return self.__sim_steps
 
     def _add_kilobot(self, kilobot: Kilobot):
         self._kilobots.append(kilobot)
@@ -189,7 +194,8 @@ class KilobotsEnv(gym.Env):
 
         from ..lib import kb_rendering
         if self._screen is None:
-            self._screen = kb_rendering.KilobotsViewer(self.screen_width, self.screen_height, caption=self.spec.id)
+            caption = self.spec.id if self.spec else ""
+            self._screen = kb_rendering.KilobotsViewer(self.screen_width, self.screen_height, caption=caption)
             world_min, world_max = self.world_bounds
             self._screen.set_bounds(world_min[0], world_max[0], world_min[1], world_max[1])
         elif self._screen.close_requested():
@@ -227,11 +233,11 @@ class KilobotsEnv(gym.Env):
 
         return kilobot_index, objects_index, light_index
 
-    def get_objects(self):
+    def get_objects(self) -> [Body]:
         return self._objects
 
-    def get_kilobots(self):
+    def get_kilobots(self) -> [Kilobot]:
         return self._kilobots
 
-    def get_light(self):
+    def get_light(self) -> Light:
         return self._light

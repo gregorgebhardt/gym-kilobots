@@ -172,9 +172,7 @@ class GradientLight(Light):
         self._gradient_angle = np.array([angle])
         self._gradient_vec = np.r_[np.cos(angle), np.sin(angle)]
 
-        # self._bounds = np.array([-np.pi]), np.array([np.pi])
         self._bounds = np.array([-np.pi]), np.array([np.pi])
-        # self._action_bounds = np.array([-np.pi]) / 90, np.array([np.pi]) / 90
         self._action_bounds = 2 * np.array([-np.pi]), 2 * np.array([np.pi])
 
         self.observation_space = spaces.Box(*self._bounds, dtype=np.float64)

@@ -61,6 +61,11 @@ class Body:
     def get_world_point(self, point):
         return tuple(self._body.GetWorldPoint(point))
 
+    def collides_with(self, other):
+        for contact_edge in self._body.contacts_gen:
+            if contact_edge.other == other and contact_edge.contact.touching:
+                return True
+
     @abc.abstractmethod
     def draw(self, viewer):
         raise NotImplementedError('The draw method needs to be implemented by the subclass of Body.')
@@ -104,6 +109,12 @@ class Quad(Body):
         corner = self.get_world_point((-self._width / 2, -self._height / 2))
         axes.add_patch(Rectangle(xy=corner, angle=math.degrees(theta),
                                  width=self._width, height=self._height, **kwargs))
+
+    def get_width(self):
+        return self._width
+
+    def get_height(self):
+        return self._height
 
 
 class CornerQuad(Quad):
