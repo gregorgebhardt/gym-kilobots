@@ -162,12 +162,8 @@ class SmoothGridLight(Light):
 class GradientLight(Light):
     relative_actions = False
 
-    def __init__(self, center: np.ndarray = None, angle: float = .0):
+    def __init__(self, angle: float = .0):
         super().__init__()
-
-        self._gradient_center = center
-        if self._gradient_center is None:
-            self._gradient_center = np.array([0, 0])
 
         self._gradient_angle = np.array([angle])
         self._gradient_vec = np.r_[np.cos(angle), np.sin(angle)]
@@ -181,11 +177,6 @@ class GradientLight(Light):
     def step(self, action):
         if action is None:
             return
-        # if action < self._action_bounds[0]:
-        #     action += 2 * np.pi
-        # if action > self._action_bounds[1]:
-        #     action -= 2 * np.pi
-        # self._gradient_angle = action
 
         action = np.maximum(action, self._action_bounds[0])
         action = np.minimum(action, self._action_bounds[1])
@@ -198,8 +189,7 @@ class GradientLight(Light):
         self._gradient_vec = np.r_[np.cos(self._gradient_angle), np.sin(self._gradient_angle)]
 
     def get_value(self, position: np.ndarray):
-        query_point = position - self._gradient_center.astype(float)
-        projection = self._gradient_vec.dot(query_point)
+        projection = self._gradient_vec.dot(position)
         return projection
 
     def get_gradient(self, position: np.ndarray):
@@ -209,5 +199,5 @@ class GradientLight(Light):
         return self._gradient_angle
 
     def draw(self, viewer):
-        viewer.draw_polyline((self._gradient_center, self._gradient_center + self._gradient_vec), color=(1, 0, 0))
+        viewer.draw_polyline((np.array([0, 0]), self._gradient_vec), color=(1, 0, 0))
         pass
