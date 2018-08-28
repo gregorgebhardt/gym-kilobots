@@ -211,6 +211,9 @@ class KilobotsEnv(gym.Env):
         self._screen.draw_polyline([(x_min, y_max), (x_min, y_min), (x_max, y_min), (x_max, y_max), (x_min, y_max)],
                                    width=.003)
 
+        # allow to draw on table
+        self._draw_on_table(self._screen)
+
         # render light
         self._light.draw(self._screen)
 
@@ -221,6 +224,9 @@ class KilobotsEnv(gym.Env):
         # render kilobots
         for kb in self._kilobots:
             kb.draw(self._screen)
+
+        # allow to draw on top
+        self._draw_on_top(self._screen)
 
         self._screen.render()
 
@@ -241,3 +247,9 @@ class KilobotsEnv(gym.Env):
 
     def get_light(self) -> Light:
         return self._light
+
+    def _draw_on_table(self, screen: kb_rendering.KilobotsViewer):
+        pass
+
+    def _draw_on_top(self, screen: kb_rendering.KilobotsViewer):
+        pass
