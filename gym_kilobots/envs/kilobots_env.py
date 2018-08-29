@@ -248,8 +248,8 @@ class KilobotsEnv(gym.Env):
     def get_light(self) -> Light:
         return self._light
 
-    def _draw_on_table(self, screen: kb_rendering.KilobotsViewer):
+    def _draw_on_table(self, screen):
         pass
 
-    def _draw_on_top(self, screen: kb_rendering.KilobotsViewer):
+    def _draw_on_top(self, screen):
         pass
