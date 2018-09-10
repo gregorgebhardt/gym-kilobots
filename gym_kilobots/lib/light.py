@@ -136,7 +136,7 @@ class CircularGradientLight(SinglePositionLight):
         return self._position
 
     def draw(self, viewer):
-        viewer.draw_aacircle(position=self._position, radius=self._radius, color=(255, 255, 30, 150))
+        viewer.draw_transparent_circle(position=self._position, radius=self._radius, color=(255, 255, 30, 150))
 
 
 class SmoothGridLight(Light):

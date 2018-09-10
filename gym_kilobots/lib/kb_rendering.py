@@ -13,6 +13,8 @@ class KilobotsViewer(object):
         pygame.display.set_caption(caption)
         pygame.event.set_allowed(pygame.QUIT)
 
+        pygame.mouse.set_visible(False)
+
         self._scale = np.array([[1., .0], [.0, -1.]])
         self._translation = np.zeros(2)
 
@@ -57,6 +59,13 @@ class KilobotsViewer(object):
         end = self._transform(end)
         width = int(self._scale[0, 0] * width)
         pygame.draw.line(self._window, color, start, end, width)
+
+    def draw_transparent_circle(self, position=(0, 0), radius=.1, color=(0, 0, 0, 125), filled=True, width=.01):
+        radius = int(self._scale[0, 0] * radius)
+        s = pygame.Surface((2 * radius, 2 * radius), pygame.HWSURFACE | pygame.SRCALPHA)
+        width = 0 if filled else int(self._scale[0, 0] * width)
+        pygame.draw.circle(s, color, (radius, radius), radius, width)
+        self._window.blit(s, self._transform(position)-radius)
 
     def get_array(self):
         image_data = pygame.surfarray.array3d(self._window)

@@ -73,6 +73,10 @@ class KilobotsEnv(gym.Env):
     def _sim_steps(self):
         return self.__sim_steps
 
+    @property
+    def _steps_per_action(self):
+        return self.__steps_per_action
+
     def _add_kilobot(self, kilobot: Kilobot):
         self._kilobots.append(kilobot)
 
@@ -214,9 +218,6 @@ class KilobotsEnv(gym.Env):
         # allow to draw on table
         self._draw_on_table(self._screen)
 
-        # render light
-        self._light.draw(self._screen)
-
         # render objects
         for o in self._objects:
             o.draw(self._screen)
@@ -224,6 +225,9 @@ class KilobotsEnv(gym.Env):
         # render kilobots
         for kb in self._kilobots:
             kb.draw(self._screen)
+
+        # render light
+        self._light.draw(self._screen)
 
         # allow to draw on top
         self._draw_on_top(self._screen)
