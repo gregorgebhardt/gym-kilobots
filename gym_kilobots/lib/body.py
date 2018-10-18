@@ -1,8 +1,10 @@
 import abc
-import math
 
 import numpy as np
 import Box2D
+
+
+_world_scale = 25.
 
 
 class Body:
@@ -10,8 +12,8 @@ class Body:
     _friction = 0.01
     _restitution = 0.0
 
-    _linear_damping = .8
-    _angular_damping = .8
+    _linear_damping = .8  #* _world_scale
+    _angular_damping = .8  #* _world_scale
 
     def __init__(self, world: Box2D.b2World, position=None, orientation=None):
         if self.__class__ == Body:
@@ -21,13 +23,14 @@ class Body:
 
         if position is None:
             position = [.0, .0]
+        position = np.asarray(position)
 
         if orientation is None:
             orientation = .0
 
         self._world = world
         self._body: Box2D.b2Body = world.CreateDynamicBody(
-            position=Box2D.b2Vec2(*position),
+            position=Box2D.b2Vec2(*(_world_scale * position)),
             angle=orientation,
             linearDamping=self._linear_damping,
             angularDamping=self._angular_damping)
@@ -38,19 +41,27 @@ class Body:
         self._world.DestroyBody(self._body)
 
     def get_position(self):
-        return tuple(self._body.position)
+        return np.asarray(self._body.position) / _world_scale
+
+    def set_position(self, position):
+        self._body.position = position
 
     def get_orientation(self):
         return self._body.angle
 
+    def set_orientation(self, orientation):
+        self._body.angle = orientation
+
     def get_pose(self):
-        return tuple((*self._body.position, self._body.angle))
+        position = np.asarray(self._body.position) / _world_scale
+        return tuple((*position, self._body.angle))
 
     def get_state(self):
-        return tuple((*self._body.position, self._body.angle))
+        return self.get_pose()
+        # return tuple((*self._body.position, self._body.angle))
 
     def get_local_point(self, point):
-        return tuple(self._body.GetLocalPoint(point))
+        return np.asarray(self._body.GetLocalPoint(_world_scale * np.asarray(point))) / _world_scale
 
     def get_local_orientation(self, angle):
         return angle - self._body.angle
@@ -59,12 +70,18 @@ class Body:
         return tuple((*self.get_local_point(pose[:2]), self.get_local_orientation(pose[2])))
 
     def get_world_point(self, point):
-        return tuple(self._body.GetWorldPoint(point))
+        return np.asarray(self._body.GetWorldPoint(_world_scale * np.asarray(point))) / _world_scale
 
     def collides_with(self, other):
         for contact_edge in self._body.contacts_gen:
             if contact_edge.other == other and contact_edge.contact.touching:
                 return True
+
+    def set_color(self, color):
+        self._body_color = color
+
+    def set_highlight_color(self, color):
+        self._highlight_color = color
 
     @abc.abstractmethod
     def draw(self, viewer):
@@ -83,11 +100,24 @@ class Quad(Body):
         self._height = height
 
         self._fixture = self._body.CreatePolygonFixture(
-            box=Box2D.b2Vec2(self._width/2, self._height/2),
+            box=Box2D.b2Vec2(self._width/2 * _world_scale, self._height/2 * _world_scale),
             density=self._density,
             friction=self._friction,
             restitution=self._restitution,
-            radius=.001)
+            # radius=.000001
+        )
+
+    @property
+    def width(self):
+        return self._width
+
+    @property
+    def height(self):
+        return self._height
+
+    @property
+    def vertices(self):
+        return np.asarray([[self._body.GetWorldPoint(v) for v in self._fixture.shape.vertices]]) / _world_scale
 
     def draw(self, viewer):
         vertices = [self._body.transform * v for v in self._fixture.shape.vertices]
@@ -149,7 +179,7 @@ class Circle(Body):
         self._radius = radius
 
         self._fixture = self._body.CreateCircleFixture(
-            radius=self._radius,
+            radius=self._radius * _world_scale,
             density=self._density,
             friction=self._friction,
             restitution=self._restitution
@@ -157,6 +187,9 @@ class Circle(Body):
 
     def draw(self, viewer):
         viewer.draw_circle(position=self._body.position, radius=self._radius, color=self._body_color)
+    @property
+    def vertices(self):
+        return np.array([[self.get_position()]])
 
     def get_radius(self):
         return self._radius
@@ -186,26 +219,41 @@ class Polygon(Body):
         vertices /= v_size
         vertices *= np.array((width, height))
 
-        # compute centroid
-        d = vertices * np.roll(np.roll(vertices, 1, axis=1), 1, axis=2)
-        d = d[..., 0] - d[..., 1]
-        A = .5 * d.sum(axis=1)
-        centroids = np.sum((vertices + np.roll(vertices, 1, axis=1)) * d[..., None], axis=1) / (6*A[:, None])
 
-        centroid = np.abs(A[None, :]).dot(centroids) / np.abs(A[:, None]).sum()
-        centroid[centroid < 1e-10] = .0
+        centroid = np.zeros(2)
+        area = .0
+        for vs in vertices:
+            # compute centroid of polygon
+            a = 0.5 * np.abs(np.dot(vs[:, 0], np.roll(vs[:, 1], 1)) - np.dot(vs[:, 1], np.roll(vs[:, 0], 1)))
+            area += a
+            centroid += vs.mean(axis=0) * a
+        centroid /= area
 
-        centered_vertices = vertices - centroid
+        self.__local_vertices = vertices - centroid
+        self.__local_vertices.setflags(write=False)
 
-        for v in centered_vertices:
+        for v in self.__local_vertices:
             self._body.CreatePolygonFixture(
-                shape=Box2D.b2PolygonShape(vertices=v.tolist()),
+                shape=Box2D.b2PolygonShape(vertices=(v * _world_scale).tolist()),
                 density=self._density,
                 friction=self._friction,
                 restitution=self._restitution,
-                radius=.001)
+                # radius=.00000001
+            )
 
         self._fixture = self._body.fixtures
+
+    @property
+    def vertices(self):
+        return np.array([[self.get_world_point(v) for v in vertices] for vertices in self.__local_vertices])
+
+    @property
+    def local_vertices(self):
+        return self.__local_vertices
+
+    @property
+    def plot_vertices(self):
+        raise NotImplementedError
 
     @staticmethod
     def _shape_vertices() -> np.ndarray:
@@ -242,6 +290,10 @@ class Triangle(Polygon):
                           (0.0, 0.0),
                           (0.0, 1.0)]])
 
+    @property
+    def plot_vertices(self):
+        return self.vertices.reshape((-1, 2))
+
 
 class LForm(Polygon):
     @staticmethod
@@ -249,12 +301,22 @@ class LForm(Polygon):
         return np.array([[(-0.05, 0.0), (0.1, 0.0), (0.1, 0.3), (-0.05, 0.3)],
                          [(0.1, 0.0), (0.1, -0.15), (-0.2, -0.15), (-0.2, 0.0)]])
 
+    @property
+    def plot_vertices(self):
+        vertices = self.vertices.reshape((-1, 2))
+        return vertices[[0, 7, 6, 5, 2, 3], :]
+
 
 class TForm(Polygon):
     @staticmethod
     def _shape_vertices():
-        return np.array([[(0.0, 0.15), (0.1, 0.15), (0.1, -0.15), (0.0, -0.15)],
+        return np.array([[(0.0, 0.15), (0.2, 0.15), (0.2, -0.15), (0.0, -0.15)],
                          [(0.0, 0.05), (0.0, -0.05), (-0.2, -0.05), (-0.2, 0.05)]])
+
+    @property
+    def plot_vertices(self):
+        vertices = self.vertices.reshape((-1, 2))
+        return vertices[[0, 1, 2, 3, 5, 6, 7, 4], :]
 
 
 class CForm(Polygon):
@@ -263,3 +325,8 @@ class CForm(Polygon):
         return np.array([[(0.09, 0.15), (0.09, -0.15), (-0.01, -0.15), (-0.01, 0.15,)],
                          [(-0.01, -0.15), (-0.11, -0.15), (-0.11, -0.08), (-0.01, -0.05)],
                          [(-0.01, 0.15), (-0.11, 0.15), (-0.11, 0.08), (-0.01, 0.05)]])
+
+    @property
+    def plot_vertices(self):
+        vertices = self.vertices.reshape((-1, 2))
+        return vertices[[0, 1, 5, 6, 7, 11, 10, 9], :]

@@ -1,8 +1,4 @@
 import gym
-from gym import error, spaces, utils
-
-import sys
-import logging
 
 import numpy as np
 import pandas as pd
@@ -10,8 +6,9 @@ import pandas as pd
 from Box2D import b2World, b2ChainShape
 
 # import os, signal
+from gym import spaces
 
-from ..lib.body import Body
+from ..lib.body import Body, _world_scale
 from ..lib.kilobot import Kilobot
 from ..lib.light import Light
 
@@ -23,6 +20,9 @@ class KilobotsEnv(gym.Env):
 
     world_size = world_width, world_height = 2., 1.5
     screen_size = screen_width, screen_height = 1200, 900
+
+    _observe_objects = False
+    _observe_light = True
 
     __sim_steps_per_second = 10
     __sim_velocity_iterations = 10
@@ -50,11 +50,11 @@ class KilobotsEnv(gym.Env):
         self.world = b2World(gravity=(0, 0), doSleep=True)
         self.table = self.world.CreateStaticBody(position=(.0, .0))
         self.table.CreateFixture(
-            shape=b2ChainShape(vertices=[(self.world_x_range[0], self.world_y_range[1]),
-                                         (self.world_x_range[0], self.world_y_range[0]),
-                                         (self.world_x_range[1], self.world_y_range[0]),
-                                         (self.world_x_range[1], self.world_y_range[1])]))
-        self.table.fixtures[0].shape.radius = .0001
+            shape=b2ChainShape(vertices=[(_world_scale * self.world_x_range[0], _world_scale * self.world_y_range[1]),
+                                         (_world_scale * self.world_x_range[0], _world_scale * self.world_y_range[0]),
+                                         (_world_scale * self.world_x_range[1], _world_scale * self.world_y_range[0]),
+                                         (_world_scale * self.world_x_range[1], _world_scale * self.world_y_range[1])]))
+        # self.table.fixtures[0].shape.radius = .000001
 
         # add kilobots
         self._kilobots: [Kilobot] = []
@@ -67,11 +67,30 @@ class KilobotsEnv(gym.Env):
 
         self._screen = None
 
+        self.kilobots_space: spaces.Box = None
+
+        self.light_state_space: spaces.Box = None
+        self.light_observation_space: spaces.Box = None
+
+        self.weight_state_space: spaces.Box = None
+        self.weight_observation_space: spaces.Box = None
+
+        self.object_state_space: spaces.Box = None
+        self.object_observation_space: spaces.Box = None
+
         self._configure_environment()
 
     @property
     def _sim_steps(self):
         return self.__sim_steps
+
+    @property
+    def kilobots(self):
+        return tuple(self._kilobots)
+
+    @property
+    def objects(self):
+        return tuple(self._objects)
 
     @property
     def _steps_per_action(self):
@@ -196,7 +215,7 @@ class KilobotsEnv(gym.Env):
         if self.__sim_steps % self.__sim_steps_per_second // self.__viz_steps_per_second:
             return
 
-        from ..lib import kb_rendering
+        from gym_kilobots import kb_rendering
         if self._screen is None:
             caption = self.spec.id if self.spec else ""
             self._screen = kb_rendering.KilobotsViewer(self.screen_width, self.screen_height, caption=caption)
@@ -257,3 +276,11 @@ class KilobotsEnv(gym.Env):
 
     def _draw_on_top(self, screen):
         pass
+
+
+class UnknownObjectException(Exception):
+    pass
+
+
+class UnknownLightTypeException(Exception):
+    pass

@@ -3,7 +3,7 @@ import math
 import numpy as np
 from Box2D import b2Vec2
 
-from .body import Circle
+from .body import Circle, _world_scale
 
 
 class Kilobot(Circle):
@@ -20,15 +20,15 @@ class Kilobot(Circle):
     # _impulse_right_point_body = (_leg_front + _leg_right) / 2
     # _impulse_left_point_body = (_leg_front + _leg_left) / 2
 
-    _max_linear_velocity = 0.01  # meters / s
+    _max_linear_velocity = 0.01 * _world_scale  # meters / s
     _max_angular_velocity = 0.1 * math.pi  # radians / s
 
     _density = 1.0
     _friction = 0.0
     _restitution = 0.0
 
-    _linear_damping = .8
-    _angular_damping = .8
+    _linear_damping = .8  #* _world_scale
+    _angular_damping = .8  #* _world_scale
 
     def __init__(self, world, position=None, orientation=None, light=None):
         # all parameters in real world units
@@ -49,7 +49,7 @@ class Kilobot(Circle):
 
     def get_ambientlight(self):
         if self._light is not None:
-            sensor_position = self._body.GetWorldPoint((0.0, -self._radius))
+            sensor_position = self.get_world_point((0.0, -self._radius))
             light_measurement = self._light.get_value(sensor_position)
             # todo add noise here
             return light_measurement
@@ -104,7 +104,7 @@ class Kilobot(Circle):
             R = [[c, -s], [s, c]]
 
             translation = self._leg_left - np.dot(R, self._leg_left)
-            linear_velocity = self._body.GetWorldVector(translation) / time_step
+            linear_velocity = self._body.GetWorldVector(translation * _world_scale) / _world_scale / time_step
 
         elif self._motor_left:
             angular_velocity = -self._motor_left / 255. * self._max_angular_velocity
@@ -114,25 +114,25 @@ class Kilobot(Circle):
             R = [[c, -s], [s, c]]
 
             translation = self._leg_right - np.dot(R, self._leg_right)
-            linear_velocity = self._body.GetWorldVector(translation) / time_step
+            linear_velocity = self._body.GetWorldVector(translation * _world_scale) / _world_scale / time_step
 
         self._body.angularVelocity = angular_velocity
         if type(linear_velocity) == np.ndarray:
-            self._body.linearVelocity = b2Vec2(*linear_velocity.astype(float))
+            self._body.linearVelocity = b2Vec2(*linear_velocity.astype(float)) * _world_scale
         else:
-            self._body.linearVelocity = linear_velocity
+            self._body.linearVelocity = linear_velocity * _world_scale
 
     def draw(self, viewer):
         super(Kilobot, self).draw(viewer)
         # viewer.draw_circle(position=self._body.position, radius=self._radius, color=(50,) * 3, filled=False)
 
         # draw direction as triangle with color set by function
-        top = self._body.GetWorldPoint((0.0, self._radius - .005))
+        top = self.get_world_point((0.0, self._radius - .005))
         # w = 0.1 * self._radius
         # h = np.cos(np.arcsin(w)) - self._radius
         # bottom_left = self._body.GetWorldPoint((-0.006, -0.009))
         # bottom_right = self._body.GetWorldPoint((0.006, -0.009))
-        middle = self._body.position
+        middle = self.get_position()
 
         # viewer.draw_polygon(vertices=(top, bottom_left, bottom_right), color=self._highlight_color)
         viewer.draw_polyline(vertices=(top, middle), color=self._highlight_color, closed=False, width=.005)
@@ -175,27 +175,11 @@ class SimplePhototaxisKilobot(Kilobot):
         self.turn_left()
 
     def _loop(self):
-        pos_real = np.array(self._body.GetWorldPoint((0.0, -self._radius)))
-
-        dist = np.linalg.norm(pos_real - self._light.get_state())
-
-        current_light = 1.0 - dist
-
-        # TODO better phototaxis algorithm?
-        if dist > 0.01:
-            if current_light > self.last_light:
-                self.counter = 0
-                self.switch_directions()
-            else:
-                self.counter = self.counter + 1
-
-            self.last_light = current_light
-
-        # else:
-            # self._set_motors(0, 0)
+        # we override step
+        pass
 
     def step(self, time_step):
-        movement_direction = self._light.get_gradient(self._body.position)
+        movement_direction = self._light.get_gradient(self.get_position()) * _world_scale
 
         n = np.sqrt(np.dot(movement_direction, movement_direction))
         # n = np.linalg.norm(movement_direction)
