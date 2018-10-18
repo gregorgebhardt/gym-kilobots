@@ -120,25 +120,11 @@ class Quad(Body):
         return np.asarray([[self._body.GetWorldPoint(v) for v in self._fixture.shape.vertices]]) / _world_scale
 
     def draw(self, viewer):
-        vertices = [self._body.transform * v for v in self._fixture.shape.vertices]
-        viewer.draw_polygon(vertices, filled=True, color=self._body_color)
+        viewer.draw_polygon(self.vertices[0], filled=True, color=self._body_color)
 
     def plot(self, axes, **kwargs):
-        from matplotlib.patches import Rectangle
-        defaults = dict(fill=True, edgecolor='#929591', facecolor='#d8dcd6')
-        for k in defaults:
-            if k not in kwargs:
-                kwargs[k] = defaults[k]
-
-        if 'alpha' in kwargs:
-            from matplotlib.colors import to_rgba
-            kwargs['edgecolor'] = to_rgba(kwargs['edgecolor'], kwargs['alpha'])
-            kwargs['facecolor'] = to_rgba(kwargs['facecolor'], kwargs['alpha'])
-
-        x, y, theta = self.get_pose()
-        corner = self.get_world_point((-self._width / 2, -self._height / 2))
-        axes.add_patch(Rectangle(xy=corner, angle=math.degrees(theta),
-                                 width=self._width, height=self._height, **kwargs))
+        from gym_kilobots.kb_plotting import plot_rect
+        return plot_rect(axes, self, **kwargs)
 
     def get_width(self):
         return self._width
@@ -151,25 +137,11 @@ class CornerQuad(Quad):
     def draw(self, viewer):
         super(CornerQuad, self).draw(viewer)
 
-        vertices = [self._body.transform * v for v in self._fixture.shape.vertices]
-
-        viewer.draw_polygon(vertices[0:3], filled=True, color=self._highlight_color)
+        viewer.draw_polygon(self.vertices[0][0:3], filled=True, color=self._highlight_color)
 
     def plot(self, axes, **kwargs):
-        from matplotlib.patches import Polygon
-        defaults = dict(highlight_fill=True, highlight_facecolor='#d8dcd6')
-        for k in defaults:
-            if k not in kwargs:
-                kwargs[k] = defaults[k]
-
-        if 'alpha' in kwargs:
-            from matplotlib.colors import to_rgba
-            kwargs['highlight_facecolor'] = to_rgba(kwargs['highlight_facecolor'], kwargs['alpha'])
-
-        super(CornerQuad, self).plot(axes, **kwargs)
-        vertices = [self._body.transform * v for v in self._fixture.shape.vertices]
-        axes.add_patch(Polygon(xy=np.array(vertices[0:3]), fill=kwargs['highlight_fill'],
-                               facecolor=kwargs['highlight_facecolor']))
+        from gym_kilobots.kb_plotting import plot_rect
+        return plot_rect(axes, self, highlight_corner=True, **kwargs)
 
 
 class Circle(Body):
@@ -186,7 +158,8 @@ class Circle(Body):
         )
 
     def draw(self, viewer):
-        viewer.draw_circle(position=self._body.position, radius=self._radius, color=self._body_color)
+        viewer.draw_circle(position=self.get_position(), radius=self._radius, color=self._body_color)
+
     @property
     def vertices(self):
         return np.array([[self.get_position()]])
@@ -195,13 +168,8 @@ class Circle(Body):
         return self._radius
 
     def plot(self, axes, **kwargs):
-        from matplotlib.patches import Circle
-        defaults = dict(fill=True, edgecolor='#929591', facecolor='#d8dcd6')
-        for k in defaults:
-            if k not in kwargs:
-                kwargs[k] = defaults[k]
-
-        axes.add_patch(Circle(xy=self.get_position(), radius=self.get_radius(), **kwargs))
+        from gym_kilobots.kb_plotting import plot_circle
+        return plot_circle(axes, self, **kwargs)
 
 
 class Polygon(Body):
@@ -260,27 +228,12 @@ class Polygon(Body):
         raise NotImplementedError
 
     def draw(self, viewer):
-        for fixture in self._fixture:
-            vertices = [self._body.transform * v for v in fixture.shape.vertices]
+        for vertices in self.vertices:
             viewer.draw_polygon(vertices, filled=True, color=self._body_color)
 
     def plot(self, axes, **kwargs):
-        from matplotlib.patches import Polygon
-        defaults = dict(fill=True,
-                        # edgecolor='#929591',
-                        facecolor='#d8dcd6')
-        for k in defaults:
-            if k not in kwargs:
-                kwargs[k] = defaults[k]
-
-        if 'alpha' in kwargs:
-            from matplotlib.colors import to_rgba
-            # kwargs['edgecolor'] = to_rgba(kwargs['edgecolor'], kwargs['alpha'])
-            kwargs['facecolor'] = to_rgba(kwargs['facecolor'], kwargs['alpha'])
-
-        for fixture in self._fixture:
-            vertices = [self._body.transform * v for v in fixture.shape.vertices]
-            axes.add_patch(Polygon(xy=np.array(vertices), **kwargs))
+        from gym_kilobots.kb_plotting import plot_polygon
+        return plot_polygon(axes, self, **kwargs)
 
 
 class Triangle(Polygon):
