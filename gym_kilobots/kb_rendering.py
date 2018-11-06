@@ -13,7 +13,7 @@ class KilobotsViewer(object):
         pygame.display.set_caption(caption)
         pygame.event.set_allowed(pygame.QUIT)
 
-        pygame.mouse.set_visible(False)
+        # pygame.mouse.set_visible(False)
 
         self._scale = np.array([[1., .0], [.0, -1.]])
         self._translation = np.zeros(2)

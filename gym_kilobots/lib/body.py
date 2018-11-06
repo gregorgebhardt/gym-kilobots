@@ -37,6 +37,14 @@ class Body:
         self._body.linearVelocity = Box2D.b2Vec2(*[.0, .0])
         self._body.angularVelocity = .0
 
+    @property
+    def width(self):
+        raise NotImplementedError
+
+    @property
+    def height(self):
+        raise NotImplementedError
+
     def __del__(self):
         self._world.DestroyBody(self._body)
 
@@ -156,6 +164,14 @@ class Circle(Body):
             friction=self._friction,
             restitution=self._restitution
         )
+
+    @property
+    def width(self):
+        return 2 * self._radius
+
+    @property
+    def height(self):
+        return 2 * self._radius
 
     def draw(self, viewer):
         viewer.draw_circle(position=self.get_position(), radius=self._radius, color=self._body_color)

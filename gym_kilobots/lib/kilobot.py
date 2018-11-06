@@ -2,6 +2,7 @@ import math
 
 import numpy as np
 from Box2D import b2Vec2
+from gym import spaces
 
 from .body import Circle, _world_scale
 
@@ -21,7 +22,7 @@ class Kilobot(Circle):
     # _impulse_left_point_body = (_leg_front + _leg_left) / 2
 
     _max_linear_velocity = 0.01 * _world_scale  # meters / s
-    _max_angular_velocity = 0.1 * math.pi  # radians / s
+    _max_angular_velocity = 0.5 * math.pi  # radians / s
 
     _density = 1.0
     _friction = 0.0
@@ -40,7 +41,7 @@ class Kilobot(Circle):
         self.__light_measurement = 0
         self.__turn_direction = None
 
-        self._body_color = (100, 100, 100)
+        self._body_color = (150, 150, 150)
         self._highlight_color = (255, 255, 255)
 
         self._light = light
@@ -123,11 +124,14 @@ class Kilobot(Circle):
             self._body.linearVelocity = linear_velocity * _world_scale
 
     def draw(self, viewer):
-        super(Kilobot, self).draw(viewer)
+        # super(Kilobot, self).draw(viewer)
         # viewer.draw_circle(position=self._body.position, radius=self._radius, color=(50,) * 3, filled=False)
+        viewer.draw_aacircle(position=self.get_position(), radius=self._radius + .002, color=self._body_color)
+        viewer.draw_aacircle(position=self.get_position(), radius=self._radius + .002, color=(100, 100, 100),
+                             filled=False, width=.005)
 
         # draw direction as triangle with color set by function
-        top = self.get_world_point((0.0, self._radius - .005))
+        front = self.get_world_point((self._radius - .005, 0.0))
         # w = 0.1 * self._radius
         # h = np.cos(np.arcsin(w)) - self._radius
         # bottom_left = self._body.GetWorldPoint((-0.006, -0.009))
@@ -135,7 +139,7 @@ class Kilobot(Circle):
         middle = self.get_position()
 
         # viewer.draw_polygon(vertices=(top, bottom_left, bottom_right), color=self._highlight_color)
-        viewer.draw_polyline(vertices=(top, middle), color=self._highlight_color, closed=False, width=.005)
+        viewer.draw_polyline(vertices=(front, middle), color=self._highlight_color, closed=False, width=.005)
 
         # t = rendering.Transform(translation=self._body.GetWorldPoint(self._led))
         # viewer.draw_circle(.003, res=20, color=self._highlight_color).add_attr(t)
@@ -189,6 +193,52 @@ class SimplePhototaxisKilobot(Kilobot):
         self._body.linearVelocity = b2Vec2(*movement_direction.astype(float))
         # self._body.angle = np.arctan2(movement_direction[1], movement_direction[0])
         self._body.linearDamping = .0
+
+
+class SimpleDirectControlKilobot(Kilobot):
+    _density = 2.0
+
+    def __init__(self, world, position=None, orientation=None, light=None):
+        super().__init__(world=world, position=position, orientation=orientation, light=light)
+
+        self._action = np.array([.0, .0])
+        self._velocity = np.random.rand(2) * np.array([.01, .5 * np.pi])
+        self._velocity[1] -= .1 * np.pi
+        self.action_space = spaces.Box(np.array([-.1, -.5 * np.pi]), np.array([.1, .5 * np.pi]), dtype=np.float64)
+        self.state_space = spaces.Box(np.array([-np.inf, -np.inf, -np.inf, .0, -self._max_angular_velocity]),
+                                      np.array([np.inf, np.inf, np.inf, self._max_linear_velocity,
+                                                self._max_angular_velocity]), dtype=np.float64)
+
+    def get_state(self):
+        pose = super(SimpleDirectControlKilobot, self).get_state()
+        return pose + tuple(self._velocity)
+
+    def set_action(self, action):
+        if action is not None:
+            self._action = action
+        else:
+            self._action = np.array([.0, .0])
+
+    def _setup(self):
+        pass
+
+    def _loop(self):
+        # we override step
+        pass
+
+    def step(self, time_step):
+        self._velocity += self._action * time_step
+
+        self._velocity = np.maximum(self._velocity, [.0, -self._max_angular_velocity])
+        self._velocity = np.minimum(self._velocity, [self._max_linear_velocity, self._max_angular_velocity])
+
+        linear_velocity = np.array([np.cos(self.get_orientation()), np.sin(self.get_orientation())])
+        linear_velocity *= self._velocity[0] * _world_scale * time_step
+
+        self._body.linearVelocity = b2Vec2(*linear_velocity.astype(float))
+        self._body.angularVelocity = self._velocity[1] * time_step
+        # self._body.linearDamping = .0
+        # self._body.angularDamping = .0
 
 
 class PhototaxisKilobot(Kilobot):

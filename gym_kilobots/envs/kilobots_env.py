@@ -1,12 +1,8 @@
 import gym
 
 import numpy as np
-import pandas as pd
 
 from Box2D import b2World, b2ChainShape
-
-# import os, signal
-from gym import spaces
 
 from ..lib.body import Body, _world_scale
 from ..lib.kilobot import Kilobot
@@ -30,10 +26,7 @@ class KilobotsEnv(gym.Env):
     __viz_steps_per_second = 20
     __steps_per_action = 10
 
-    # in addition to action space and observation space, we also define the state space
-    state_space = None
-
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, **kwargs):
         cls.sim_steps_per_second = cls.__sim_steps_per_second
         cls.sim_step = 1. / cls.__sim_steps_per_second
         cls.world_x_range = -cls.world_width / 2, cls.world_width / 2
@@ -43,7 +36,7 @@ class KilobotsEnv(gym.Env):
 
         return super(KilobotsEnv, cls).__new__(cls)
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.__sim_steps = 0
 
         # create the Kilobots world in Box2D
@@ -67,18 +60,9 @@ class KilobotsEnv(gym.Env):
 
         self._screen = None
 
-        self.kilobots_space: spaces.Box = None
-
-        self.light_state_space: spaces.Box = None
-        self.light_observation_space: spaces.Box = None
-
-        self.weight_state_space: spaces.Box = None
-        self.weight_observation_space: spaces.Box = None
-
-        self.object_state_space: spaces.Box = None
-        self.object_observation_space: spaces.Box = None
-
         self._configure_environment()
+
+        self._step_world()
 
     @property
     def _sim_steps(self):
@@ -89,8 +73,25 @@ class KilobotsEnv(gym.Env):
         return tuple(self._kilobots)
 
     @property
+    def num_kilobots(self):
+        return len(self._kilobots)
+
+    @property
     def objects(self):
         return tuple(self._objects)
+
+    @property
+    def action_space(self):
+        if self._light:
+            return self._light.action_space
+
+    @property
+    def observation_space(self):
+        return NotImplemented
+
+    @property
+    def state_space(self):
+        return NotImplemented
 
     @property
     def _steps_per_action(self):
@@ -146,6 +147,9 @@ class KilobotsEnv(gym.Env):
         self._configure_environment()
         self.__sim_steps = 0
 
+        # step to resolve
+        self._step_world()
+
         return self.get_observation()
 
     def step(self, action: np.ndarray):
@@ -158,18 +162,7 @@ class KilobotsEnv(gym.Env):
         for i in range(self.__steps_per_action):
             # step light
             if action is not None:
-                if self._light.interpolate_actions:
-                    if self._light.relative_actions:
-                        self._light.step(action / self.__steps_per_action)
-                    else:
-                        light_state = self._light.get_state()
-                        rel_sub_action = (action - light_state) * i / self.__steps_per_action
-                        self._light.step(light_state + rel_sub_action)
-                else:
-                    if i == 0:
-                        self._light.step(action)
-                    else:
-                        self._light.step(None)
+                self._light.step(action, self.sim_step)
 
             # step kilobots
             for k in self._kilobots:
@@ -246,21 +239,13 @@ class KilobotsEnv(gym.Env):
             kb.draw(self._screen)
 
         # render light
-        self._light.draw(self._screen)
+        if self._light is not None:
+            self._light.draw(self._screen)
 
         # allow to draw on top
         self._draw_on_top(self._screen)
 
         self._screen.render()
-
-    def get_index(self):
-        kilobot_index = pd.MultiIndex.from_product([range(len(self._kilobots)), ['x', 'y', 'theta']],
-                                                   names=['idx', 'dim'])
-        objects_index = pd.MultiIndex.from_product([range(len(self._objects)), ['x', 'y', 'theta']],
-                                                   names=['idx', 'dim'])
-        light_index = self._light.get_index()
-
-        return kilobot_index, objects_index, light_index
 
     def get_objects(self) -> [Body]:
         return self._objects

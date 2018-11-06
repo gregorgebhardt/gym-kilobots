@@ -9,11 +9,11 @@ class Light(object):
     relative_actions = True
     interpolate_actions = True
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.observation_space = None
         self.action_space = None
         
-    def step(self, action):
+    def step(self, action, time_step: float):
         raise NotImplementedError
 
     def get_value(self, position: np.ndarray) -> float:
@@ -30,9 +30,9 @@ class Light(object):
 
 
 class SinglePositionLight(Light):
-    def __init__(self, position: np.ndarray = None, bounds: (np.ndarray, np.ndarray) = None,
-                 action_bounds: (np.ndarray, np.ndarray) = None, relative_actions: bool = True):
-        super().__init__()
+    def __init__(self, *, position: np.ndarray = None, bounds: (np.ndarray, np.ndarray) = None,
+                 action_bounds: (np.ndarray, np.ndarray) = None, relative_actions: bool = True, **kwargs):
+        super().__init__(**kwargs)
         if position is None:
             self._position = np.array((.0, .0))
         else:
@@ -53,16 +53,19 @@ class SinglePositionLight(Light):
         self.action_space = spaces.Box(*self._action_bounds, dtype=np.float64)
         self.observation_space = spaces.Box(*self._bounds, dtype=np.float64)
 
-    def step(self, action: np.ndarray):
+    def step(self, action: np.ndarray, time_step: float):
         if action is None:
             return
+
         if self._action_bounds is not None:
             action = np.maximum(action, self._action_bounds[0])
             action = np.minimum(action, self._action_bounds[1])
+
         if self._relative_actions:
-            self._position += action
+            self._position += action * time_step
         else:
             self._position = action
+
         self._position = np.maximum(self._position, self._bounds[0])
         self._position = np.minimum(self._position, self._bounds[1])
 
@@ -72,6 +75,9 @@ class SinglePositionLight(Light):
     def get_gradient(self, position: np.ndarray):
         gradient = self._position - position
         return gradient / np.linalg.norm(gradient)
+
+    def get_position(self):
+        return self._position
 
     def get_state(self):
         return self._position
@@ -103,10 +109,10 @@ class CompositeLight(Light):
     def lights(self):
         return tuple(self._lights)
 
-    def step(self, action):
+    def step(self, action, time_step):
         if action is not None:
             for l, ad in zip(self._lights, self._action_dims):
-                l.step(action[:ad])
+                l.step(action[:ad], time_step)
                 action = action[ad:]
 
     def get_value(self, position: np.ndarray) -> float:
@@ -156,7 +162,7 @@ class SmoothGridLight(Light):
     def __init__(self):
         super(SmoothGridLight, self).__init__()
 
-    def step(self, action):
+    def step(self, action, time_step):
         raise NotImplementedError
 
     def get_value(self, position: np.ndarray):
@@ -191,16 +197,17 @@ class GradientLight(Light):
         self.observation_space = spaces.Box(*self._bounds, dtype=np.float64)
         self.action_space = spaces.Box(*self._action_bounds, dtype=np.float64)
 
-    def step(self, action):
+    def step(self, action, time_step):
         if action is None:
             return
 
         action = np.maximum(action, self._action_bounds[0])
         action = np.minimum(action, self._action_bounds[1])
         if self.relative_actions:
-            self._gradient_angle += action
+            self._gradient_angle += action * time_step
         else:
             self._gradient_angle = action
+
         if self._gradient_angle < self._bounds[0]:
             self._gradient_angle += 2 * np.pi
         if self._gradient_angle > self._bounds[1]:
@@ -225,3 +232,51 @@ class GradientLight(Light):
     def draw(self, viewer):
         viewer.draw_polyline((np.array([0, 0]), self._gradient_vec), color=(1, 0, 0))
         pass
+
+
+class MomentumLight(CircularGradientLight):
+    interpolate_actions = False
+
+    def __init__(self, velocity=None, max_velocity=None, action_bounds=None, **kwargs):
+        super().__init__(**kwargs)
+
+        self._action_bounds = action_bounds
+        if self._action_bounds is None:
+            self._action_bounds = np.array([-.01, -.01]), np.array([.01, .01])
+
+        if velocity is None:
+            self._velocity = np.array([.0, .0])
+        else:
+            self._velocity = velocity
+
+        if max_velocity is None:
+            self.max_velocity = np.inf
+        else:
+            self.max_velocity = max_velocity
+
+        self._obs_bounds = np.r_[self._bounds[0], [-max_velocity, -max_velocity]], \
+                           np.r_[self._bounds[1], [max_velocity, max_velocity]]
+
+        self.action_space = spaces.Box(*self._action_bounds, dtype=np.float64)
+        self.observation_space = spaces.Box(*self._obs_bounds, dtype=np.float64)
+
+    def step(self, action: np.ndarray, time_step: float):
+        if action is not None:
+            action = action.squeeze()
+
+            if self._action_bounds is not None:
+                action = np.maximum(action, self._action_bounds[0])
+                action = np.minimum(action, self._action_bounds[1])
+
+            self._velocity += action * time_step
+
+        if self.max_velocity is not None and np.linalg.norm(self._velocity) > self.max_velocity:
+            self._velocity *= self.max_velocity / np.linalg.norm(self._velocity)
+
+        self._position += self._velocity * time_step
+
+        self._position = np.maximum(self._position, self._bounds[0])
+        self._position = np.minimum(self._position, self._bounds[1])
+
+    def get_state(self):
+        return np.r_[self._position, self._velocity]
