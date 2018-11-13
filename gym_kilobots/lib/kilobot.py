@@ -1,5 +1,3 @@
-import math
-
 import numpy as np
 from Box2D import b2Vec2
 from gym import spaces
@@ -21,8 +19,8 @@ class Kilobot(Circle):
     # _impulse_right_point_body = (_leg_front + _leg_right) / 2
     # _impulse_left_point_body = (_leg_front + _leg_left) / 2
 
-    _max_linear_velocity = 0.01 * _world_scale  # meters / s
-    _max_angular_velocity = 0.5 * math.pi  # radians / s
+    _max_linear_velocity = 0.01  # meters / s
+    _max_angular_velocity = 0.5 * np.pi  # radians / s
 
     _density = 1.0
     _friction = 0.0
@@ -183,12 +181,14 @@ class SimplePhototaxisKilobot(Kilobot):
         pass
 
     def step(self, time_step):
-        movement_direction = self._light.get_gradient(self.get_position()) * _world_scale
+        movement_direction = self._light.get_gradient(self.get_position())
 
         n = np.sqrt(np.dot(movement_direction, movement_direction))
         # n = np.linalg.norm(movement_direction)
         if n > self._max_linear_velocity:
             movement_direction = movement_direction / n * self._max_linear_velocity
+
+        movement_direction *= _world_scale
 
         self._body.linearVelocity = b2Vec2(*movement_direction.astype(float))
         # self._body.angle = np.arctan2(movement_direction[1], movement_direction[0])
@@ -198,13 +198,18 @@ class SimplePhototaxisKilobot(Kilobot):
 class SimpleDirectControlKilobot(Kilobot):
     _density = 2.0
 
-    def __init__(self, world, position=None, orientation=None, light=None):
-        super().__init__(world=world, position=position, orientation=orientation, light=light)
+    def __init__(self, world, position=None, orientation=None, velocity=None):
+        super().__init__(world=world, position=position, orientation=orientation, light=None)
 
         self._action = np.array([.0, .0])
-        self._velocity = np.random.rand(2) * np.array([.01, .5 * np.pi])
-        self._velocity[1] -= .1 * np.pi
-        self.action_space = spaces.Box(np.array([-.1, -.5 * np.pi]), np.array([.1, .5 * np.pi]), dtype=np.float64)
+
+        if velocity:
+            self._velocity = velocity
+        else:
+            self._velocity = np.random.rand(2) * np.array([self._max_linear_velocity, 2 * self._max_angular_velocity])
+            self._velocity[1] -= self._max_angular_velocity
+
+        self.action_space = spaces.Box(np.array([-.01, -.5 * np.pi]), np.array([.01, .5 * np.pi]), dtype=np.float64)
         self.state_space = spaces.Box(np.array([-np.inf, -np.inf, -np.inf, .0, -self._max_angular_velocity]),
                                       np.array([np.inf, np.inf, np.inf, self._max_linear_velocity,
                                                 self._max_angular_velocity]), dtype=np.float64)
@@ -215,9 +220,14 @@ class SimpleDirectControlKilobot(Kilobot):
 
     def set_action(self, action):
         if action is not None:
+            action = np.minimum(action, self.action_space.high)
+            action = np.maximum(action, self.action_space.low)
             self._action = action
         else:
             self._action = np.array([.0, .0])
+
+    def get_action(self):
+        return self._action
 
     def _setup(self):
         pass
@@ -233,10 +243,10 @@ class SimpleDirectControlKilobot(Kilobot):
         self._velocity = np.minimum(self._velocity, [self._max_linear_velocity, self._max_angular_velocity])
 
         linear_velocity = np.array([np.cos(self.get_orientation()), np.sin(self.get_orientation())])
-        linear_velocity *= self._velocity[0] * _world_scale * time_step
+        linear_velocity *= self._velocity[0] * _world_scale
 
         self._body.linearVelocity = b2Vec2(*linear_velocity.astype(float))
-        self._body.angularVelocity = self._velocity[1] * time_step
+        self._body.angularVelocity = self._velocity[1]
         # self._body.linearDamping = .0
         # self._body.angularDamping = .0
 

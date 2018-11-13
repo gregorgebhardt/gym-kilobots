@@ -17,12 +17,13 @@ class EnvConfiguration(yaml.YAMLObject):
     class ObjectConfiguration(yaml.YAMLObject):
         yaml_tag = '!ObjectConf'
 
-        def __init__(self, idx, shape, width, height, init):
+        def __init__(self, idx, color, shape, width, height, init):
             self.idx = idx
             self.shape = shape
             self.width = width
             self.height = height
             self.init = init
+            self.color = color
 
         def __eq__(self, other):
             for k in self.__dict__:
@@ -151,7 +152,7 @@ class YamlKilobotsEnv(KilobotsEnv):
 
     def _init_objects(self):
         for o in self.conf.objects:
-            self._init_object(o.shape, o.width, o.height, o.init)
+            self._init_object(o.shape, o.width, o.height, o.init, o.color)
 
     @property
     def object_state_space(self):
@@ -165,10 +166,10 @@ class YamlKilobotsEnv(KilobotsEnv):
         objects_obs_high = np.array([self.world_x_range[1], self.world_y_range[1], 1., 1.] * len(self._objects))
         return spaces.Box(low=objects_obs_low, high=objects_obs_high, dtype=np.float64)
 
-    def _init_object(self, object_shape, object_width, object_height, object_init):
+    def _init_object(self, object_shape, object_width, object_height, object_init, object_color=None):
         if object_init == 'random':
             init_position = np.random.rand(2) * np.asarray(self.world_size) + self.world_bounds[0]
-            init_position *= 0.8
+            init_position *= 0.7
             init_orientation = np.random.rand() * 2 * np.pi - np.pi
             object_init = np.r_[init_position, init_orientation]
 
@@ -202,6 +203,8 @@ class YamlKilobotsEnv(KilobotsEnv):
         else:
             raise UnknownObjectException('Shape of form {} not known.'.format(object_shape))
 
+        if object_color:
+            obj.set_color(object_color)
         self._add_object(obj)
 
     def _init_light(self):

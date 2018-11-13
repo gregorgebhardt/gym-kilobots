@@ -8,12 +8,12 @@ _world_scale = 25.
 
 
 class Body:
-    _density = 2
+    _density = 10
     _friction = 0.01
     _restitution = 0.0
 
-    _linear_damping = .8  #* _world_scale
-    _angular_damping = .8  #* _world_scale
+    _linear_damping = 8.  #* _world_scale
+    _angular_damping = 8.  #* _world_scale
 
     def __init__(self, world: Box2D.b2World, position=None, orientation=None):
         if self.__class__ == Body:
@@ -174,7 +174,7 @@ class Circle(Body):
         return 2 * self._radius
 
     def draw(self, viewer):
-        viewer.draw_circle(position=self.get_position(), radius=self._radius, color=self._body_color)
+        viewer.draw_aacircle(position=self.get_position(), radius=self._radius, color=self._body_color)
 
     @property
     def vertices(self):

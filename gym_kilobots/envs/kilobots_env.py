@@ -1,3 +1,5 @@
+import time
+
 import gym
 
 import numpy as np
@@ -23,7 +25,6 @@ class KilobotsEnv(gym.Env):
     __sim_steps_per_second = 10
     __sim_velocity_iterations = 10
     __sim_position_iterations = 10
-    __viz_steps_per_second = 20
     __steps_per_action = 10
 
     def __new__(cls, **kwargs):
@@ -47,7 +48,7 @@ class KilobotsEnv(gym.Env):
                                          (_world_scale * self.world_x_range[0], _world_scale * self.world_y_range[0]),
                                          (_world_scale * self.world_x_range[1], _world_scale * self.world_y_range[0]),
                                          (_world_scale * self.world_x_range[1], _world_scale * self.world_y_range[1])]))
-        # self.table.fixtures[0].shape.radius = .000001
+        self._real_time = False
 
         # add kilobots
         self._kilobots: [Kilobot] = []
@@ -160,6 +161,7 @@ class KilobotsEnv(gym.Env):
         old_state = self.get_state()
 
         for i in range(self.__steps_per_action):
+            _t_step_start = time.time()
             # step light
             if action is not None:
                 self._light.step(action, self.sim_step)
@@ -176,6 +178,11 @@ class KilobotsEnv(gym.Env):
 
             if self._screen is not None:
                 self.render()
+
+            _t_step_end = time.time()
+
+            if self._real_time:
+                time.sleep(max(self.sim_step - (_t_step_end - _t_step_start), .0))
 
         # state
         new_state = self.get_state()
@@ -204,9 +211,6 @@ class KilobotsEnv(gym.Env):
         #         self._screen.close()
         #         self._screen = None
         #     return
-
-        if self.__sim_steps % self.__sim_steps_per_second // self.__viz_steps_per_second:
-            return
 
         from gym_kilobots import kb_rendering
         if self._screen is None:
