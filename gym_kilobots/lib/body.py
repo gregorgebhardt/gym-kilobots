@@ -8,12 +8,12 @@ _world_scale = 25.
 
 
 class Body:
-    _density = 10
+    _density = 2
     _friction = 0.01
     _restitution = 0.0
 
-    _linear_damping = 8.  #* _world_scale
-    _angular_damping = 8.  #* _world_scale
+    _linear_damping = .8  # * _world_scale
+    _angular_damping = .8  # * _world_scale
 
     def __init__(self, world: Box2D.b2World, position=None, orientation=None):
         if self.__class__ == Body:
@@ -52,7 +52,7 @@ class Body:
         return np.asarray(self._body.position) / _world_scale
 
     def set_position(self, position):
-        self._body.position = position
+        self._body.position = position * _world_scale
 
     def get_orientation(self):
         return self._body.angle
@@ -63,6 +63,10 @@ class Body:
     def get_pose(self):
         position = np.asarray(self._body.position) / _world_scale
         return tuple((*position, self._body.angle))
+
+    def set_pose(self, pose):
+        self.set_position(pose[:2])
+        self.set_orientation(pose[2])
 
     def get_state(self):
         return self.get_pose()
@@ -192,8 +196,8 @@ class Polygon(Body):
     def __init__(self, width: float, height: float, **kwargs):
         super().__init__(**kwargs)
 
-        self.width = width
-        self.height = height
+        self._width = width
+        self._height = height
 
         # TODO: right now this assumes that all subpolygons have the same number of edges
         # TODO: rewrite such that arbitrary subpolygons can be used here
@@ -202,7 +206,6 @@ class Polygon(Body):
         v_size = np.amax(vertices, (0, 1)) - np.amin(vertices, (0, 1))
         vertices /= v_size
         vertices *= np.array((width, height))
-
 
         centroid = np.zeros(2)
         area = .0
@@ -226,6 +229,14 @@ class Polygon(Body):
             )
 
         self._fixture = self._body.fixtures
+
+    @property
+    def width(self):
+        return self._width
+
+    @property
+    def height(self):
+        return self._height
 
     @property
     def vertices(self):

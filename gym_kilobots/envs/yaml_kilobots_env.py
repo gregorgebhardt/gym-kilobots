@@ -142,10 +142,9 @@ class YamlKilobotsEnv(KilobotsEnv):
             _observation_spaces_high = np.concatenate((_observation_spaces_high, self.light_observation_space.high))
         if self.object_observation_space:
             # the objects are observed as x, y, sin(theta), cos(theta)
-            objects_low = np.array([self.world_x_range[0], self.world_y_range[0], -1., -1.] * len(self._objects))
-            objects_high = np.array([self.world_x_range[1], self.world_y_range[1], 1., 1.] * len(self._objects))
-            _observation_spaces_low = np.concatenate((_observation_spaces_low, objects_low))
-            _observation_spaces_high = np.concatenate((_observation_spaces_high, objects_high))
+            obj_obs_space = self.object_observation_space
+            _observation_spaces_low = np.concatenate((_observation_spaces_low, obj_obs_space.low))
+            _observation_spaces_high = np.concatenate((_observation_spaces_high, obj_obs_space.high))
 
         return spaces.Box(low=_observation_spaces_low, high=_observation_spaces_high,
                                             dtype=np.float32)
@@ -166,12 +165,15 @@ class YamlKilobotsEnv(KilobotsEnv):
         objects_obs_high = np.array([self.world_x_range[1], self.world_y_range[1], 1., 1.] * len(self._objects))
         return spaces.Box(low=objects_obs_low, high=objects_obs_high, dtype=np.float64)
 
+    def _get_random_object_init(self):
+        init_position = np.random.rand(2) * np.asarray(self.world_size) + self.world_bounds[0]
+        init_position *= 0.7
+        init_orientation = np.random.rand() * 2 * np.pi - np.pi
+        return np.r_[init_position, init_orientation]
+
     def _init_object(self, object_shape, object_width, object_height, object_init, object_color=None):
         if object_init == 'random':
-            init_position = np.random.rand(2) * np.asarray(self.world_size) + self.world_bounds[0]
-            init_position *= 0.7
-            init_orientation = np.random.rand() * 2 * np.pi - np.pi
-            object_init = np.r_[init_position, init_orientation]
+            object_init = self._get_random_object_init()
 
         if object_shape in ['square', 'quad', 'rect']:
             obj = Quad(width=object_width, height=object_height,

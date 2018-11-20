@@ -195,13 +195,17 @@ class SimplePhototaxisKilobot(Kilobot):
         self._body.linearDamping = .0
 
 
-class SimpleDirectControlKilobot(Kilobot):
+class SimpleVelocityControlKilobot(Kilobot):
     _density = 2.0
 
-    def __init__(self, world, position=None, orientation=None, velocity=None):
-        super().__init__(world=world, position=position, orientation=orientation, light=None)
+    action_space = spaces.Box(np.array([.0, -Kilobot._max_angular_velocity]),
+                              np.array([Kilobot._max_linear_velocity, Kilobot._max_angular_velocity]),
+                              dtype=np.float64)
+    state_space = spaces.Box(np.array([-np.inf, -np.inf, -np.inf]),
+                             np.array([np.inf, np.inf, np.inf, ]), dtype=np.float64)
 
-        self._action = np.array([.0, .0])
+    def __init__(self, world, *, velocity=None, **kwargs):
+        super().__init__(world=world, light=None, **kwargs)
 
         if velocity:
             self._velocity = velocity
@@ -209,25 +213,20 @@ class SimpleDirectControlKilobot(Kilobot):
             self._velocity = np.random.rand(2) * np.array([self._max_linear_velocity, 2 * self._max_angular_velocity])
             self._velocity[1] -= self._max_angular_velocity
 
-        self.action_space = spaces.Box(np.array([-.01, -.5 * np.pi]), np.array([.01, .5 * np.pi]), dtype=np.float64)
-        self.state_space = spaces.Box(np.array([-np.inf, -np.inf, -np.inf, .0, -self._max_angular_velocity]),
-                                      np.array([np.inf, np.inf, np.inf, self._max_linear_velocity,
-                                                self._max_angular_velocity]), dtype=np.float64)
-
-    def get_state(self):
-        pose = super(SimpleDirectControlKilobot, self).get_state()
-        return pose + tuple(self._velocity)
+    # def get_state(self):
+    #     pose = super(SimpleVelocityControlKilobot, self).get_state()
+    #     return pose + tuple(self._velocity)
 
     def set_action(self, action):
         if action is not None:
             action = np.minimum(action, self.action_space.high)
             action = np.maximum(action, self.action_space.low)
-            self._action = action
+            self._velocity = action
         else:
-            self._action = np.array([.0, .0])
+            self._velocity = np.array([.0, .0])
 
     def get_action(self):
-        return self._action
+        return self._velocity
 
     def _setup(self):
         pass
@@ -237,11 +236,6 @@ class SimpleDirectControlKilobot(Kilobot):
         pass
 
     def step(self, time_step):
-        self._velocity += self._action * time_step
-
-        self._velocity = np.maximum(self._velocity, [.0, -self._max_angular_velocity])
-        self._velocity = np.minimum(self._velocity, [self._max_linear_velocity, self._max_angular_velocity])
-
         linear_velocity = np.array([np.cos(self.get_orientation()), np.sin(self.get_orientation())])
         linear_velocity *= self._velocity[0] * _world_scale
 
@@ -249,6 +243,46 @@ class SimpleDirectControlKilobot(Kilobot):
         self._body.angularVelocity = self._velocity[1]
         # self._body.linearDamping = .0
         # self._body.angularDamping = .0
+
+    def set_color(self, color):
+        self._body_color = color
+
+
+class SimpleAccelerationControlKilobot(SimpleVelocityControlKilobot):
+    _density = 2.0
+
+    action_space = spaces.Box(np.array([-.005, -.2 * np.pi]), np.array([.005, .2 * np.pi]), dtype=np.float64)
+    state_space = spaces.Box(np.array([-np.inf, -np.inf, -np.inf, .0, -Kilobot._max_angular_velocity]),
+                                        np.array([np.inf, np.inf, np.inf, Kilobot._max_linear_velocity,
+                                            Kilobot._max_angular_velocity]), dtype=np.float64)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._acceleration = np.array([.0, .0])
+
+    def get_state(self):
+        pose = super(SimpleAccelerationControlKilobot, self).get_state()
+        return pose + tuple(self._velocity)
+
+    def set_action(self, action):
+        if action is not None:
+            action = np.minimum(action, self.action_space.high)
+            action = np.maximum(action, self.action_space.low)
+            self._acceleration = action
+        else:
+            self._acceleration = np.array([.0, .0])
+
+    def get_action(self):
+        return self._acceleration
+
+    def step(self, time_step):
+        self._velocity += self._acceleration * time_step
+
+        self._velocity = np.maximum(self._velocity, [.0, -self._max_angular_velocity])
+        self._velocity = np.minimum(self._velocity, [self._max_linear_velocity, self._max_angular_velocity])
+
+        super(SimpleAccelerationControlKilobot, self).step(time_step)
 
 
 class PhototaxisKilobot(Kilobot):
