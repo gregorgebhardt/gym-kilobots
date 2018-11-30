@@ -39,6 +39,7 @@ class KilobotsEnv(gym.Env):
 
     def __init__(self, **kwargs):
         self.__sim_steps = 0
+        self.__reset_counter = 0
 
         # create the Kilobots world in Box2D
         self.world = b2World(gravity=(0, 0), doSleep=True)
@@ -60,6 +61,8 @@ class KilobotsEnv(gym.Env):
         self.__seed = 0
 
         self._screen = None
+        self.render_mode = 'human'
+        self.video_path = None
 
         self._configure_environment()
 
@@ -144,6 +147,7 @@ class KilobotsEnv(gym.Env):
         return [self.__seed]
 
     def reset(self):
+        self.__reset_counter += 1
         self.destroy()
         self._configure_environment()
         self.__sim_steps = 0
@@ -185,7 +189,7 @@ class KilobotsEnv(gym.Env):
             self.__sim_steps += 1
 
             if self._screen is not None:
-                self.render()
+                self.render(self.render_mode)
 
             _t_step_end = time.time()
 
@@ -213,17 +217,27 @@ class KilobotsEnv(gym.Env):
         self.world.Step(self.sim_step, self.__sim_velocity_iterations, self.__sim_position_iterations)
         self.world.ClearForces()
 
-    def render(self, mode='human'):
+    def render(self, mode=None):
         # if close:
         #     if self._screen is not None:
         #         self._screen.close()
         #         self._screen = None
         #     return
+        if mode is None:
+            mode = self.render_mode
 
         from gym_kilobots import kb_rendering
         if self._screen is None:
             caption = self.spec.id if self.spec else ""
-            self._screen = kb_rendering.KilobotsViewer(self.screen_width, self.screen_height, caption=caption)
+            if self.video_path:
+                import os
+                os.makedirs(self.video_path, exist_ok=True)
+                _video_path = os.path.join(self.video_path, str(self.__reset_counter) + '.mp4')
+            else:
+                _video_path = None
+
+            self._screen = kb_rendering.KilobotsViewer(self.screen_width, self.screen_height, caption=caption,
+                                                       display=mode == 'human', record_to=_video_path)
             world_min, world_max = self.world_bounds
             self._screen.set_bounds(world_min[0], world_max[0], world_min[1], world_max[1])
         elif self._screen.close_requested():

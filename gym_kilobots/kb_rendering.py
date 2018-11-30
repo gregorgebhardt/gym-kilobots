@@ -5,18 +5,33 @@ pygame.init()
 
 
 class KilobotsViewer(object):
-    def __init__(self, width, height, caption=""):
+    def __init__(self, width, height, caption="", display=True, record_to=None):
         self._width = width
         self._height = height
+        self._display = display
 
-        self._window = pygame.display.set_mode((width, height), pygame.HWSURFACE | pygame.DOUBLEBUF)
-        pygame.display.set_caption(caption)
-        pygame.event.set_allowed(pygame.QUIT)
+        if display:
+            flags = pygame.HWSURFACE | pygame.DOUBLEBUF
+            self._window = pygame.display.set_mode((width, height), flags)
+            pygame.display.set_caption(caption)
+            pygame.event.set_allowed(pygame.QUIT)
 
-        # pygame.mouse.set_visible(False)
+            # pygame.mouse.set_visible(False)
+        else:
+            flags = pygame.HWSURFACE | pygame.DOUBLEBUF
+            self._window = pygame.Surface((width, height), flags)
+
+        if record_to:
+            import imageio
+            self._writer = imageio.get_writer(record_to, mode='I')
+        else:
+            self._writer = None
 
         self._scale = np.array([[1., .0], [.0, -1.]])
         self._translation = np.zeros(2)
+
+    def __del__(self):
+        self.close()
 
     def set_bounds(self, left, right, bottom, top):
         assert right > left and top > bottom
@@ -75,14 +90,24 @@ class KilobotsViewer(object):
         mouse_pos = np.array(pygame.mouse.get_pos()) - self._translation
         return np.linalg.inv(self._scale).dot(mouse_pos)
 
-    @staticmethod
-    def render():
-        pygame.display.flip()
+    def render(self):
+        if self._display:
+            pygame.display.flip()
+            if self._writer:
+                self._writer.append_data(pygame.surfarray.pixels3d(self._window))
+        else:
+            image = pygame.surfarray.array3d(self._window)
+            if self._writer:
+                self._writer.append_data(image)
+
 
     @staticmethod
     def close_requested():
-        return pygame.event.peek(pygame.QUIT)
+        if pygame.display.get_init():
+            return pygame.event.peek(pygame.QUIT)
+        return False
 
-    @staticmethod
-    def close():
+    def close(self):
         pygame.display.quit()
+        if self._writer:
+            self._writer.close()
