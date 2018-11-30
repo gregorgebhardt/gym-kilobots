@@ -158,13 +158,21 @@ class KilobotsEnv(gym.Env):
         #     assert self.action_space.contains(action), "%r (%s) invalid " % (action, type(action))
 
         # state before action is applied
-        old_state = self.get_state()
+        state = self.get_state()
 
         for i in range(self.__steps_per_action):
             _t_step_start = time.time()
             # step light
-            if action is not None:
+            if action is not None and self._light:
                 self._light.step(action, self.sim_step)
+
+            if self._light:
+                # compute light values and gradients
+                sensor_positions = np.array([kb.light_sensor_pos() for kb in self._kilobots])
+                values, gradients = self._light.value_and_gradients(sensor_positions)
+
+                for kb, v, g in zip(self._kilobots, values, gradients):
+                    kb.set_light_value_and_gradient(v, g)
 
             # step kilobots
             for k in self._kilobots:
@@ -185,19 +193,19 @@ class KilobotsEnv(gym.Env):
                 time.sleep(max(self.sim_step - (_t_step_end - _t_step_start), .0))
 
         # state
-        new_state = self.get_state()
+        next_state = self.get_state()
 
         # observation
         observation = self.get_observation()
 
         # reward
-        reward = self.get_reward(old_state, action, new_state)
+        reward = self.get_reward(state, action, next_state)
 
         # done
-        done = self.has_finished(new_state, action)
+        done = self.has_finished(next_state, action)
 
         # info
-        info = self.get_info(new_state, action)
+        info = self.get_info(next_state, action)
 
         return observation, reward, done, info
 

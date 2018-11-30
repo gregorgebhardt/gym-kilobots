@@ -16,11 +16,14 @@ class Light(object):
     def step(self, action, time_step: float):
         raise NotImplementedError
 
-    def get_value(self, position: np.ndarray) -> float:
+    def get_value(self, position: np.ndarray) -> np.ndarray:
         raise NotImplementedError
 
     def get_gradient(self, position: np.ndarray) -> np.ndarray:
         raise NotImplementedError
+
+    def value_and_gradients(self, position: np.ndarray) -> (np.ndarray, np.ndarray):
+        return self.get_value(position), self.get_gradient(position)
 
     def get_state(self):
         raise NotImplementedError
@@ -57,6 +60,8 @@ class SinglePositionLight(Light):
         if action is None:
             return
 
+        action = action.squeeze()
+
         if self._action_bounds is not None:
             action = np.maximum(action, self._action_bounds[0])
             action = np.minimum(action, self._action_bounds[1])
@@ -70,11 +75,16 @@ class SinglePositionLight(Light):
         self._position = np.minimum(self._position, self._bounds[1])
 
     def get_value(self, position: np.ndarray):
-        return -np.linalg.norm(self._position - position)
+        return -1 * np.linalg.norm(position - self._position, axis=1)
 
     def get_gradient(self, position: np.ndarray):
-        gradient = self._position - position
-        return gradient / np.linalg.norm(gradient)
+        gradient = -1 * (position - self._position)
+        return gradient / np.linalg.norm(gradient, axis=1)
+
+    def value_and_gradients(self, position: np.ndarray):
+        gradients = -1 * (position - self._position)
+        gradient_norms = np.linalg.norm(gradients, axis=1)
+        return -1 * gradient_norms, gradients / gradient_norms
 
     def get_position(self):
         return self._position
@@ -111,17 +121,24 @@ class CompositeLight(Light):
 
     def step(self, action, time_step):
         if action is not None:
+            action = action.squeeze()
             for l, ad in zip(self._lights, self._action_dims):
                 l.step(action[:ad], time_step)
                 action = action[ad:]
 
-    def get_value(self, position: np.ndarray) -> float:
-        return self._reducer(np.array([l.get_value(position) for l in self._lights]))
+    def get_value(self, position: np.ndarray):
+        return np.sum(np.array([l.get_value(position) for l in self._lights]), axis=0)
 
     def get_gradient(self, position: np.ndarray):
-        max_l = np.argmax([l.get_value(position) for l in self._lights])
-        return self._lights[max_l].get_gradient(position)
-        # return self._reducer(np.array([l.get_gradient(position) for l in self._lights]), 0)
+        max_l = np.argmax([l.get_value(position) for l in self._lights], axis=0)
+        grads = np.array([l.get_gradient(position) for l in self._lights])
+        return grads[max_l, range(grads.shape[1])].squeeze()
+
+    def value_and_gradients(self, position: np.ndarray):
+        values, grads = map(np.asarray, zip(*[l.value_and_gradients(position) for l in self._lights]))
+        value = np.sum(values, axis=0)
+        max_l = np.argmax(values, axis=0)
+        return value, grads[max_l, range(position.shape[0])].squeeze()
 
     def get_state(self):
         return np.concatenate(list(l.get_state() for l in self._lights))
@@ -137,19 +154,39 @@ class CircularGradientLight(SinglePositionLight):
         self._radius = radius
 
     def get_value(self, position: np.ndarray):
-        distance = np.linalg.norm(self._position - position)
-        if distance > self._radius:
-            return 0
-        return 255 * np.minimum(1 - distance / self._radius, 1.)
+        distance = np.linalg.norm(position - self._position)
+
+        # compute value as linear interpolation between 255 and 0
+        value = np.ones(position.shape[0])
+        value -= distance / self._radius
+        value = np.maximum(np.minimum(value, 1.), .0)
+        value *= 255
+
+        return value
 
     def get_gradient(self, position: np.ndarray):
-        gradient = self._position - position
-        norm_gradient = np.linalg.norm(gradient)
-        if norm_gradient < self._radius:
-            gradient /= norm_gradient
-        else:
-            gradient = np.zeros(2)
+        gradient = -1 * (position - self._position)
+        norm_gradient = np.linalg.norm(gradient, axis=-1)
+
+        gradient[norm_gradient <= self._radius] /= norm_gradient[norm_gradient < self._radius, None]
+        gradient[norm_gradient > self._radius] *= .0
+
         return gradient
+
+    def value_and_gradients(self, position: np.ndarray):
+        gradient = -1 * (position - self._position)
+        norm_gradient = np.linalg.norm(gradient, axis=1)
+
+        # compute value as linear interpolation between 255 and 0
+        value = np.ones(position.shape[0])
+        value -= norm_gradient / self._radius
+        value = np.maximum(np.minimum(value, 1.), .0)
+        value *= 255
+        # normalize gradients and set gradients to zero if norm larger than radius
+        gradient /= norm_gradient[:, None]
+        gradient[norm_gradient > self._radius] *= .0
+
+        return value, gradient
 
     def get_state(self):
         return self._position

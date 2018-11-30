@@ -1,3 +1,5 @@
+from random import shuffle
+
 import numpy as np
 
 import yaml
@@ -17,13 +19,14 @@ class EnvConfiguration(yaml.YAMLObject):
     class ObjectConfiguration(yaml.YAMLObject):
         yaml_tag = '!ObjectConf'
 
-        def __init__(self, idx, color, shape, width, height, init):
+        def __init__(self, idx, color, shape, width, height, init, symmetry):
             self.idx = idx
             self.shape = shape
             self.width = width
             self.height = height
             self.init = init
             self.color = color
+            self.symmetry = symmetry
 
         def __eq__(self, other):
             for k in self.__dict__:
@@ -112,8 +115,31 @@ class YamlKilobotsEnv(KilobotsEnv):
 
     def __init__(self, *, configuration, **kwargs):
         self.conf = configuration
+        self._progress_factor = 1.
+        self._iteration_counter = 0
 
         super().__init__(**kwargs)
+
+    @property
+    def progress_factor(self):
+        return self._progress_factor
+
+    @progress_factor.setter
+    def progress_factor(self, pf):
+        assert .0 <= pf <= 1., 'progress_factor must be a value in the range [.0, 1.]'
+        self._progress_factor = pf
+
+    @property
+    def iteration_counter(self):
+        return self._iteration_counter
+
+    @iteration_counter.setter
+    def iteration_counter(self, ic):
+        assert isinstance(ic, int) and 0 <= ic, 'iteration_counter must be a positive integer'
+        self._iteration_counter = ic
+
+    def inc_iteration_counter(self):
+        self._iteration_counter += 1
 
     def _configure_environment(self):
         self._init_objects()
@@ -147,7 +173,7 @@ class YamlKilobotsEnv(KilobotsEnv):
             _observation_spaces_high = np.concatenate((_observation_spaces_high, obj_obs_space.high))
 
         return spaces.Box(low=_observation_spaces_low, high=_observation_spaces_high,
-                                            dtype=np.float32)
+                          dtype=np.float32)
 
     def _init_objects(self):
         for o in self.conf.objects:
@@ -173,7 +199,14 @@ class YamlKilobotsEnv(KilobotsEnv):
 
     def _init_object(self, object_shape, object_width, object_height, object_init, object_color=None):
         if object_init == 'random':
-            object_init = self._get_random_object_init()
+            other_obj_pos = np.array([o.get_position() for o in self._objects])
+            while True:
+                object_init = self._get_random_object_init()
+                if len(self._objects) == 0:
+                    break
+                dists = np.linalg.norm(other_obj_pos - object_init[:2], axis=1)
+                if np.all(dists > 2*np.max((object_width, object_height))):
+                    break
 
         if object_shape in ['square', 'quad', 'rect']:
             obj = Quad(width=object_width, height=object_height,
@@ -213,55 +246,60 @@ class YamlKilobotsEnv(KilobotsEnv):
         if not hasattr(self.conf, 'light'):
             return
 
-        if self.conf.light.type in ['circular', 'momentum']:
-            light_bounds = np.array(self.world_bounds) * 1.2
-            action_bounds = np.array([-1, -1]) * .01, np.array([1, 1]) * .01
+        self._light = self._init_light_from_config(self.conf.light)
 
-            if self.conf.light.init == 'random':
-                init_position = np.random.rand(2) * np.asarray(self.world_size) + self.world_bounds[0]
-            elif self.conf.light.init == 'object':
-                which_object = self._objects[np.random.choice(len(self._objects), 1)[0]]
-                init_position = which_object.get_position()
-                radius = 1.2 * max(which_object.width, which_object.height) / 2
-                angle = np.random.rand() * 2 * np.pi - np.pi
-                init_position += (np.cos(angle) * radius, np.sin(angle) * radius)
+    def _get_random_light_init(self, at_object=False):
+        if at_object:
+            which_object = self._objects[np.random.choice(len(self._objects), 1)[0]]
+            init_position = which_object.get_position()
+            radius = 1.2 * max(which_object.width, which_object.height) / 2
+            angle = np.random.rand() * 2 * np.pi - np.pi
+            init_position += (np.cos(angle) * radius, np.sin(angle) * radius)
+        else:
+            init_position = np.random.rand(2) * np.asarray(self.world_size) + self.world_bounds[0]
+        return init_position
+
+    def _init_light_from_config(self, light_config):
+        light = None
+        if light_config.type in ['circular', 'momentum']:
+            light_bounds = np.array(self.world_bounds) * 1.1
+
+            if light_config.init == 'random':
+                init_position = self._get_random_light_init()
+            elif light_config.init == 'object':
+                init_position = self._get_random_light_init(at_object=True)
             else:
-                init_position = self.conf.light.init
+                init_position = light_config.init
 
-            if self.conf.light.type == 'circular':
-                self._light = CircularGradientLight(position=init_position, radius=self.conf.light.radius,
-                                                    bounds=light_bounds, action_bounds=action_bounds)
-            elif self.conf.light.type == 'momentum':
+            if light_config.type == 'circular':
+                action_bounds = np.array([-1, -1]) * .01, np.array([1, 1]) * .01
+                light = CircularGradientLight(position=init_position, radius=light_config.radius,
+                                              bounds=light_bounds, action_bounds=action_bounds)
+            elif light_config.type == 'momentum':
                 init_angle = np.random.rand() * 2 * np.pi - np.pi
                 init_velocity = np.array([np.sin(init_angle), np.cos(init_angle)]) * .01
                 max_velocity = .01
                 action_bounds = np.array([-1, -1]) * .01, np.array([1, 1]) * .01
-                self._light = MomentumLight(position=init_position, velocity=init_velocity,
-                                            max_velocity=max_velocity, radius=self.conf.light.radius,
-                                            bounds=light_bounds, action_bounds=action_bounds)
+                light = MomentumLight(position=init_position, velocity=init_velocity,
+                                      max_velocity=max_velocity, radius=light_config.radius,
+                                      bounds=light_bounds, action_bounds=action_bounds)
 
-            self._light_observation_space = self._light.observation_space
-            self._light_state_space = self._light.observation_space
-
-        elif self.conf.light.type == 'linear':
+        elif light_config.type == 'linear':
             # sample initial angle from a uniform between -pi and pi
-            self._light = GradientLight(angle=self.conf.light.init)
+            light = GradientLight(angle=light_config.init)
 
-            self._light_state_space = self._light.observation_space
-        elif self.conf.light.type == 'composite':
-            light_bounds = np.array(self.world_bounds) * 1.2
-            action_bounds = np.array([-1, -1]) * .01, np.array([1, 1]) * .01
+        elif light_config.type == 'composite':
             lights = []
-            for _c in self.conf.light.components:
-                if _c['init'] == 'random':
-                    _init = np.random.rand(2) * np.asarray(self.world_size) + self.world_bounds[0]
-                else:
-                    _init = _c['init']
-                lights.append(CircularGradientLight(position=_init, radius=_c['radius'], bounds=light_bounds,
-                                                    action_bounds=action_bounds))
-            self._light = CompositeLight(lights)
+            if light_config.init == 'random':
+                shuffle(light_config.components)
+            for _c in light_config.components:
+                lights.append(self._init_light_from_config(_c))
+            light = CompositeLight(lights)
+
         else:
             raise UnknownLightTypeException()
+
+        return light
 
     @property
     def action_space(self):
@@ -289,8 +327,8 @@ class YamlKilobotsEnv(KilobotsEnv):
         if isinstance(spawn_mean, str) and spawn_mean == 'light':
             if isinstance(self._light, SinglePositionLight):
                 spawn_mean = self._light.get_position()
-            elif self.conf.light.type == 'composite':
-                lights_positions = np.asarray([_l.get_state for _l in self._light.lights])
+            elif isinstance(self._light, CompositeLight):
+                lights_positions = np.asarray([_l.get_position() for _l in self._light.lights])
                 idx = np.random.choice(np.arange(len(lights_positions)), num_kilobots)
                 spawn_mean = lights_positions[idx]
             else:

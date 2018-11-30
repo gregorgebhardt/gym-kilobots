@@ -18,7 +18,7 @@ class Body:
     def __init__(self, world: Box2D.b2World, position=None, orientation=None):
         if self.__class__ == Body:
             raise NotImplementedError('Abstract class Body cannot be instantiated.')
-        self._body_color = np.array((93, 133, 195))
+        self._color = np.array((93, 133, 195))
         self._highlight_color = np.array((238, 80, 62))
 
         if position is None:
@@ -89,10 +89,32 @@ class Body:
             if contact_edge.other == other and contact_edge.contact.touching:
                 return True
 
-    def set_color(self, color):
-        self._body_color = color
+    # def set_color(self, color):
+    #     self._color = color
+    #
+    # def set_highlight_color(self, color):
+    #     self._highlight_color = color
 
-    def set_highlight_color(self, color):
+    @property
+    def color(self):
+        return self._color
+
+    @color.setter
+    def color(self, color):
+        color = np.asarray(color, dtype=np.int32)
+        color = np.maximum(color, np.zeros_like(color, dtype=np.int32))
+        color = np.minimum(color, np.full_like(color, 255, dtype=np.int32))
+        self._color = color
+
+    @property
+    def highlight_color(self):
+        return self._highlight_color
+
+    @highlight_color.setter
+    def highlight_color(self, color):
+        color = np.asarray(color, dtype=np.int32)
+        color = np.maximum(color, np.zeros_like(color, dtype=np.int32))
+        color = np.minimum(color, np.full_like(color, 255, dtype=np.int32))
         self._highlight_color = color
 
     @abc.abstractmethod
@@ -132,7 +154,7 @@ class Quad(Body):
         return np.asarray([[self._body.GetWorldPoint(v) for v in self._fixture.shape.vertices]]) / _world_scale
 
     def draw(self, viewer):
-        viewer.draw_polygon(self.vertices[0], filled=True, color=self._body_color)
+        viewer.draw_polygon(self.vertices[0], filled=True, color=self._color)
 
     def plot(self, axes, **kwargs):
         from gym_kilobots.kb_plotting import plot_rect
@@ -178,7 +200,7 @@ class Circle(Body):
         return 2 * self._radius
 
     def draw(self, viewer):
-        viewer.draw_aacircle(position=self.get_position(), radius=self._radius, color=self._body_color)
+        viewer.draw_aacircle(position=self.get_position(), radius=self._radius, color=self._color)
 
     @property
     def vertices(self):
@@ -256,7 +278,7 @@ class Polygon(Body):
 
     def draw(self, viewer):
         for vertices in self.vertices:
-            viewer.draw_polygon(vertices, filled=True, color=self._body_color)
+            viewer.draw_polygon(vertices, filled=True, color=self._color)
 
     def plot(self, axes, **kwargs):
         from gym_kilobots.kb_plotting import plot_polygon

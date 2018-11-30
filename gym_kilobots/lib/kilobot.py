@@ -42,16 +42,21 @@ class Kilobot(Circle):
         self._body_color = (150, 150, 150)
         self._highlight_color = (255, 255, 255)
 
-        self._light = light
+        self._light_value = None
+        self._light_gradient = None
 
         self._setup()
 
+    def set_light_value_and_gradient(self, value, gradient):
+        self._light_value = value
+        self._light_gradient = gradient
+
+    def light_sensor_pos(self):
+        return self.get_world_point((0.0, -self._radius))
+
     def get_ambientlight(self):
-        if self._light is not None:
-            sensor_position = self.get_world_point((0.0, -self._radius))
-            light_measurement = self._light.get_value(sensor_position)
-            # todo add noise here
-            return light_measurement
+        if self._light_value:
+            return self._light_value
         else:
             return 0
 
@@ -180,8 +185,11 @@ class SimplePhototaxisKilobot(Kilobot):
         # we override step
         pass
 
+    def light_sensor_pos(self):
+        return self.get_position()
+
     def step(self, time_step):
-        movement_direction = self._light.get_gradient(self.get_position())
+        movement_direction = self._light_gradient
 
         n = np.sqrt(np.dot(movement_direction, movement_direction))
         # n = np.linalg.norm(movement_direction)
@@ -193,6 +201,13 @@ class SimplePhototaxisKilobot(Kilobot):
         self._body.linearVelocity = b2Vec2(*movement_direction.astype(float))
         # self._body.angle = np.arctan2(movement_direction[1], movement_direction[0])
         self._body.linearDamping = .0
+
+    def draw(self, viewer):
+        # super(Kilobot, self).draw(viewer)
+        # viewer.draw_circle(position=self._body.position, radius=self._radius, color=(50,) * 3, filled=False)
+        viewer.draw_aacircle(position=self.get_position(), radius=self._radius + .002, color=self._body_color)
+        viewer.draw_aacircle(position=self.get_position(), radius=self._radius + .002, color=(100, 100, 100),
+                             filled=False, width=.005)
 
 
 class SimpleVelocityControlKilobot(Kilobot):
