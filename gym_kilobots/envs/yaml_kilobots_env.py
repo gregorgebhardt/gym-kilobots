@@ -199,14 +199,19 @@ class YamlKilobotsEnv(KilobotsEnv):
 
     def _init_object(self, object_shape, object_width, object_height, object_init, object_color=None):
         if object_init == 'random':
-            other_obj_pos = np.array([o.get_position() for o in self._objects])
-            while True:
-                object_init = self._get_random_object_init()
-                if len(self._objects) == 0:
-                    break
-                dists = np.linalg.norm(other_obj_pos - object_init[:2], axis=1)
-                if np.all(dists > 2*np.max((object_width, object_height))):
-                    break
+            object_init = self._get_random_object_init()
+            # other_obj_pos = np.array([o.get_position() for o in self._objects])
+            # _counter = 0
+            # while True:
+            #     object_init = self._get_random_object_init()
+            #     if len(self._objects) == 0:
+            #         break
+            #     dists = np.linalg.norm(other_obj_pos - object_init[:2], axis=1)
+            #     if np.all(dists > np.max((object_width, object_height))):
+            #         break
+            #     _counter += 1
+            #     if _counter > 30:
+            #         raise Exception('Could not find init position for object after 30 iterations.')
 
         if object_shape in ['square', 'quad', 'rect']:
             obj = Quad(width=object_width, height=object_height,
@@ -239,7 +244,7 @@ class YamlKilobotsEnv(KilobotsEnv):
             raise UnknownObjectException('Shape of form {} not known.'.format(object_shape))
 
         if object_color:
-            obj.set_color(object_color)
+            obj.color = object_color
         self._add_object(obj)
 
     def _init_light(self):
