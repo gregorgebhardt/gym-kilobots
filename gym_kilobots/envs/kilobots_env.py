@@ -65,6 +65,7 @@ class KilobotsEnv(gym.Env):
         self.video_path = None
 
         self._configure_environment()
+        self._kilobots = []
 
         self._step_world()
 
